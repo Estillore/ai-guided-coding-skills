@@ -1,0 +1,11 @@
+// Minimal React component template (Server Component by default)
+// Replace names and add only what the current test requires.
+
+type Props = {
+  // add only the props the test needs
+};
+
+export function ComponentName({ }: Props) {
+  // TODO: implement
+  return null;
+}

@@ -1,0 +1,9 @@
+-- Minimal MySQL query template
+-- Always use prepared statements / parameters in real code.
+-- Prefer explicit columns.
+
+SELECT id, name, created_at
+FROM table_name
+WHERE id = ?;          -- parameterized
+
+-- For multiple statements that must succeed together, wrap in a transaction.
