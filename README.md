@@ -2,6 +2,8 @@
 
 Coaching skills for **Kiro** and **Grok** that keep **you** writing the code.
 
+Works on **Windows** and **macOS** (Linux too).
+
 | AI does | You do |
 |---------|--------|
 | Shows the complete minimal solution | Type every line |
@@ -11,14 +13,69 @@ AI never edits your repo. You learn by typing, not by accepting patches.
 
 ---
 
-## Quick start
+## Quick start (Windows + Mac)
 
-1. [Clone the repo](#1-clone)
-2. Install for [Kiro](#2a-kiro) and/or [Grok](#2b-grok)
-3. Restart the tool (or open a new chat)
-4. Run: `/guided-docs` or `/guided-coding`
+### 1. Clone
 
-**Need both tools?** Install both — they use different folders and do not conflict.
+```bash
+git clone https://github.com/Estillore/ai-guided-coding-skills.git
+cd ai-guided-coding-skills
+```
+
+| OS | Terminal |
+|----|----------|
+| **Windows** | PowerShell |
+| **macOS** | Terminal (bash / zsh) |
+
+### 2. Install (one command)
+
+Default installs **both Kiro and Grok**. Use a target if you only need one.
+
+#### Windows (PowerShell)
+
+```powershell
+# Both Kiro + Grok (recommended)
+.\install.ps1
+
+# Or only one tool:
+.\install.ps1 -Target kiro
+.\install.ps1 -Target grok
+```
+
+If PowerShell blocks scripts:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+# then run .\install.ps1 again
+```
+
+#### macOS (Terminal)
+
+```bash
+chmod +x install.sh
+
+# Both Kiro + Grok (recommended)
+./install.sh
+
+# Or only one tool:
+./install.sh kiro
+./install.sh grok
+```
+
+### 3. Restart & try
+
+1. Restart **Kiro** and/or **Grok** (or open a new chat)
+2. Run:
+
+```
+/guided-docs
+```
+
+or
+
+```
+/guided-coding
+```
 
 ---
 
@@ -32,7 +89,7 @@ guided-docs → guided-plan → guided-coding → guided-review → guided-verif
 |-------|-----|
 | Learning a library or codebase | `guided-docs` |
 | Need a plan before code | `guided-plan` |
-| Implementing a feature / bugfix | `guided-coding` |
+| Implementing a feature / bug fix | `guided-coding` |
 | Code is messy / vibe-coded | `guided-refactoring` |
 | Pure test-first coaching | `guided-tdd` |
 | Quality + security review | `guided-review` |
@@ -41,8 +98,6 @@ guided-docs → guided-plan → guided-coding → guided-review → guided-verif
 ---
 
 ## What’s new (vNext)
-
-Core skills now include:
 
 - **Human Design Support** — AI implements *your* design, not a different architecture
 - **Active Confirmation Gate** — short “why does this matter?” checks on security, auth, and DB rules
@@ -70,27 +125,25 @@ Install always copies from the `skills/` folder (canonical source).
 
 ---
 
-## 1. Clone
+## What gets installed
 
-```bash
-git clone https://github.com/Estillore/ai-guided-coding-skills.git
-cd ai-guided-coding-skills
-```
+| Tool | From this repo | Goes to (Windows) | Goes to (macOS) |
+|------|----------------|-------------------|-----------------|
+| **Kiro** skills | `skills/*` | `%USERPROFILE%\.kiro\skills` | `~/.kiro/skills` |
+| **Kiro** agent | `agents/guided.json` | `%USERPROFILE%\.kiro\agents` | `~/.kiro/agents` |
+| **Kiro** steering | `steering/ponytail.md` | `%USERPROFILE%\.kiro\steering` | `~/.kiro/steering` |
+| **Grok** skills | `skills/*` | `%USERPROFILE%\.grok\skills` | `~/.grok/skills` |
 
-You need **Git** plus **Kiro**, **Grok**, or both.
+Kiro and Grok use **different folders** — installing both is safe.
 
-| OS | Terminal |
-|----|----------|
-| Windows | PowerShell |
-| macOS / Linux | Terminal (bash or zsh) |
+> **Note:** `agents/` and `steering/` are for **Kiro**.  
+> Grok loads coaching rules from each skill’s `SKILL.md`.
 
 ---
 
-## 2a. Kiro
+## Manual install (if you prefer copy-paste)
 
-### Global install (recommended — all projects)
-
-**Windows (PowerShell)**
+### Kiro — Windows
 
 ```powershell
 cd ai-guided-coding-skills
@@ -101,7 +154,7 @@ Copy-Item -Path ".\agents\guided.json" -Destination "$HOME\.kiro\agents\" -Force
 Copy-Item -Path ".\steering\ponytail.md" -Destination "$HOME\.kiro\steering\" -Force
 ```
 
-**macOS / Linux**
+### Kiro — macOS
 
 ```bash
 cd ai-guided-coding-skills
@@ -112,15 +165,27 @@ cp agents/guided.json ~/.kiro/agents/
 cp steering/ponytail.md ~/.kiro/steering/
 ```
 
-| From this repo | Installs to |
-|----------------|-------------|
-| `skills/*` | `~/.kiro/skills/` |
-| `agents/guided.json` | `~/.kiro/agents/guided.json` |
-| `steering/ponytail.md` | `~/.kiro/steering/ponytail.md` |
+### Grok — Windows
 
-### One project only (workspace)
+```powershell
+cd ai-guided-coding-skills
 
-Run from **your project root** (adjust `$SRC` / `SRC` if the clone is elsewhere):
+New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
+Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
+```
+
+### Grok — macOS
+
+```bash
+cd ai-guided-coding-skills
+
+mkdir -p ~/.grok/skills
+cp -R skills/* ~/.grok/skills/
+```
+
+### Workspace only (one project)
+
+Run from **your project root**. Adjust the path to this repo if needed.
 
 **Windows**
 
@@ -133,7 +198,7 @@ Copy-Item -Path "$SRC\agents\guided.json" -Destination ".\.kiro\agents\" -Force
 Copy-Item -Path "$SRC\steering\ponytail.md" -Destination ".\.kiro\steering\" -Force
 ```
 
-**macOS / Linux**
+**macOS**
 
 ```bash
 SRC=../ai-guided-coding-skills
@@ -144,116 +209,55 @@ cp "$SRC"/agents/guided.json .kiro/agents/
 cp "$SRC"/steering/ponytail.md .kiro/steering/
 ```
 
-### Check Kiro
-
-1. Restart Kiro or open a **new chat**
-2. Type `/` — you should see `/guided-coding`, `/guided-docs`, etc.
-3. Start with `/guided-docs` or `/guided-coding`
-
----
-
-## 2b. Grok
-
-### Global install (recommended)
-
-**Windows (PowerShell)**
-
-```powershell
-cd ai-guided-coding-skills
-
-New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
-Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
-```
-
-**macOS / Linux**
-
-```bash
-cd ai-guided-coding-skills
-
-mkdir -p ~/.grok/skills
-cp -R skills/* ~/.grok/skills/
-```
-
-| From this repo | Installs to |
-|----------------|-------------|
-| `skills/*` | `~/.grok/skills/` |
-
-> **Note:** `agents/guided.json` and `steering/ponytail.md` are for **Kiro**.  
-> Grok loads coaching rules from each skill’s `SKILL.md` under `~/.grok/skills/`.
-
-### Check Grok
-
-1. Restart Grok or start a new session
-2. Run `/guided-coding`, or ask:  
-   `Use guided-coding to help me implement this feature step by step.`
-
----
-
-## Install Kiro + Grok together
-
-**Windows**
-
-```powershell
-cd ai-guided-coding-skills
-
-# Kiro
-New-Item -ItemType Directory -Force -Path "$HOME\.kiro\skills", "$HOME\.kiro\agents", "$HOME\.kiro\steering" | Out-Null
-Copy-Item -Path ".\skills\*" -Destination "$HOME\.kiro\skills\" -Recurse -Force
-Copy-Item -Path ".\agents\guided.json" -Destination "$HOME\.kiro\agents\" -Force
-Copy-Item -Path ".\steering\ponytail.md" -Destination "$HOME\.kiro\steering\" -Force
-
-# Grok
-New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
-Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
-```
-
-**macOS / Linux**
-
-```bash
-cd ai-guided-coding-skills
-
-# Kiro
-mkdir -p ~/.kiro/skills ~/.kiro/agents ~/.kiro/steering
-cp -R skills/* ~/.kiro/skills/
-cp agents/guided.json ~/.kiro/agents/
-cp steering/ponytail.md ~/.kiro/steering/
-
-# Grok
-mkdir -p ~/.grok/skills
-cp -R skills/* ~/.grok/skills/
-```
-
 ---
 
 ## Update later
 
+### Windows
+
+```powershell
+cd ai-guided-coding-skills
+git pull
+.\install.ps1
+```
+
+### macOS
+
 ```bash
 cd ai-guided-coding-skills
 git pull
+./install.sh
 ```
-
-Then re-run the same **Kiro** and/or **Grok** copy commands from above.
 
 ---
 
-## Paths cheat sheet
+## Check it worked
 
-| Shortcut | Windows | macOS / Linux |
-|----------|---------|----------------|
-| Home | `C:\Users\YourName` | `/Users/you` or `/home/you` |
-| Kiro skills | `%USERPROFILE%\.kiro\skills` | `~/.kiro/skills` |
-| Grok skills | `%USERPROFILE%\.grok\skills` | `~/.grok/skills` |
+### Windows paths
 
-**Sanity check files**
+| Check | Path |
+|-------|------|
+| Kiro skill | `C:\Users\YourName\.kiro\skills\guided-coding\SKILL.md` |
+| Kiro agent | `C:\Users\YourName\.kiro\agents\guided.json` |
+| Grok skill | `C:\Users\YourName\.grok\skills\guided-coding\SKILL.md` |
 
-- Kiro: `~/.kiro/skills/guided-coding/SKILL.md` and `~/.kiro/agents/guided.json`
-- Grok: `~/.grok/skills/guided-coding/SKILL.md`
+### macOS paths
+
+| Check | Path |
+|-------|------|
+| Kiro skill | `~/.kiro/skills/guided-coding/SKILL.md` |
+| Kiro agent | `~/.kiro/agents/guided.json` |
+| Grok skill | `~/.grok/skills/guided-coding/SKILL.md` |
+
+In chat, type `/` — you should see guided skills like `/guided-coding`.
 
 ---
 
 ## Repo layout
 
 ```
+install.ps1             ← Windows installer
+install.sh              ← macOS / Linux installer
 skills/                 ← install from here (all guided skills)
 agents/guided.json      ← Kiro guided agent
 steering/ponytail.md    ← Kiro always-on style
