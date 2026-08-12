@@ -1,0 +1,13 @@
+<?php
+declare(strict_types=1);
+
+// Minimal PHP endpoint / handler template
+// Keep it thin. Put business logic elsewhere if needed.
+
+function handleRequest(): void
+{
+    // TODO: implement
+    // - read input
+    // - call the real logic
+    // - return response
+}
