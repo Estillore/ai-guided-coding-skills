@@ -1,8 +1,8 @@
 # AI Guided Coding Skills
 
-Coaching skills for **Kiro** and **Grok** that keep **you** writing the code.
+Coaching skills that keep **you** writing the code.
 
-Works on **Windows** and **macOS** (Linux too).
+Works with **Kiro**, **Grok**, **OpenCode**, and **Zed** on **Windows** and **macOS** (Linux too).
 
 | AI does | You do |
 |---------|--------|
@@ -10,6 +10,22 @@ Works on **Windows** and **macOS** (Linux too).
 | Plans, reviews, and verifies | Own the production code |
 
 AI never edits your repo. You learn by typing, not by accepting patches.
+
+---
+
+## Supported tools
+
+| Tool | What gets installed | Global skills path |
+|------|---------------------|--------------------|
+| **Kiro** | Skills + guided agent + Ponytail steering | `~/.kiro/skills` |
+| **Grok** | Skills | `~/.grok/skills` |
+| **OpenCode** | Skills | `~/.config/opencode/skills` |
+| **Zed** | Skills (Agent Skills standard) | `~/.agents/skills` |
+
+Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders work across these tools.
+
+> **Kiro-only extras:** `agents/guided.json` and `steering/ponytail.md`  
+> OpenCode, Grok, and Zed load coaching rules from each skill’s `SKILL.md`.
 
 ---
 
@@ -29,17 +45,22 @@ cd ai-guided-coding-skills
 
 ### 2. Install (one command)
 
-Default installs **both Kiro and Grok**. Use a target if you only need one.
+Default installs **all four tools**: Kiro, Grok, OpenCode, and Zed.
 
 #### Windows (PowerShell)
 
 ```powershell
-# Both Kiro + Grok (recommended)
+# All tools (recommended)
 .\install.ps1
 
-# Or only one tool:
+# Or pick one:
 .\install.ps1 -Target kiro
 .\install.ps1 -Target grok
+.\install.ps1 -Target opencode
+.\install.ps1 -Target zed
+
+# Kiro + Grok only:
+.\install.ps1 -Target both
 ```
 
 If PowerShell blocks scripts:
@@ -54,17 +75,22 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```bash
 chmod +x install.sh
 
-# Both Kiro + Grok (recommended)
+# All tools (recommended)
 ./install.sh
 
-# Or only one tool:
+# Or pick one:
 ./install.sh kiro
 ./install.sh grok
+./install.sh opencode
+./install.sh zed
+
+# Kiro + Grok only:
+./install.sh both
 ```
 
 ### 3. Restart & try
 
-1. Restart **Kiro** and/or **Grok** (or open a new chat)
+1. Restart your tool (or open a new chat / agent session)
 2. Run:
 
 ```
@@ -76,6 +102,9 @@ or
 ```
 /guided-coding
 ```
+
+Natural language also works, for example:  
+`Use guided-coding to help me implement this feature step by step.`
 
 ---
 
@@ -125,23 +154,63 @@ Install always copies from the `skills/` folder (canonical source).
 
 ---
 
-## What gets installed
+## Install paths (Windows + Mac)
 
-| Tool | From this repo | Goes to (Windows) | Goes to (macOS) |
-|------|----------------|-------------------|-----------------|
-| **Kiro** skills | `skills/*` | `%USERPROFILE%\.kiro\skills` | `~/.kiro/skills` |
-| **Kiro** agent | `agents/guided.json` | `%USERPROFILE%\.kiro\agents` | `~/.kiro/agents` |
-| **Kiro** steering | `steering/ponytail.md` | `%USERPROFILE%\.kiro\steering` | `~/.kiro/steering` |
-| **Grok** skills | `skills/*` | `%USERPROFILE%\.grok\skills` | `~/.grok/skills` |
+| Tool | Windows | macOS / Linux |
+|------|---------|----------------|
+| **Kiro** skills | `%USERPROFILE%\.kiro\skills` | `~/.kiro/skills` |
+| **Kiro** agent | `%USERPROFILE%\.kiro\agents` | `~/.kiro/agents` |
+| **Kiro** steering | `%USERPROFILE%\.kiro\steering` | `~/.kiro/steering` |
+| **Grok** | `%USERPROFILE%\.grok\skills` | `~/.grok/skills` |
+| **OpenCode** | `%USERPROFILE%\.config\opencode\skills` | `~/.config/opencode/skills` |
+| **Zed** | `%USERPROFILE%\.agents\skills` | `~/.agents/skills` |
 
-Kiro and Grok use **different folders** — installing both is safe.
+These folders do not conflict — you can install every tool on the same machine.
 
-> **Note:** `agents/` and `steering/` are for **Kiro**.  
-> Grok loads coaching rules from each skill’s `SKILL.md`.
+**Notes**
+
+- OpenCode also discovers skills in `~/.agents/skills` (same path Zed uses). Installing with `-Target all` / `./install.sh` covers both native OpenCode and Zed paths.
+- Zed loads skills from `~/.agents/skills` (global) or `.agents/skills` (project).
 
 ---
 
 ## Manual install (if you prefer copy-paste)
+
+### Skills only (Grok / OpenCode / Zed) — Windows
+
+```powershell
+cd ai-guided-coding-skills
+
+# Grok
+New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
+Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
+
+# OpenCode
+New-Item -ItemType Directory -Force -Path "$HOME\.config\opencode\skills" | Out-Null
+Copy-Item -Path ".\skills\*" -Destination "$HOME\.config\opencode\skills\" -Recurse -Force
+
+# Zed (Agent Skills standard)
+New-Item -ItemType Directory -Force -Path "$HOME\.agents\skills" | Out-Null
+Copy-Item -Path ".\skills\*" -Destination "$HOME\.agents\skills\" -Recurse -Force
+```
+
+### Skills only (Grok / OpenCode / Zed) — macOS
+
+```bash
+cd ai-guided-coding-skills
+
+# Grok
+mkdir -p ~/.grok/skills
+cp -R skills/* ~/.grok/skills/
+
+# OpenCode
+mkdir -p ~/.config/opencode/skills
+cp -R skills/* ~/.config/opencode/skills/
+
+# Zed (Agent Skills standard)
+mkdir -p ~/.agents/skills
+cp -R skills/* ~/.agents/skills/
+```
 
 ### Kiro — Windows
 
@@ -165,49 +234,47 @@ cp agents/guided.json ~/.kiro/agents/
 cp steering/ponytail.md ~/.kiro/steering/
 ```
 
-### Grok — Windows
-
-```powershell
-cd ai-guided-coding-skills
-
-New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
-Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
-```
-
-### Grok — macOS
-
-```bash
-cd ai-guided-coding-skills
-
-mkdir -p ~/.grok/skills
-cp -R skills/* ~/.grok/skills/
-```
-
 ### Workspace only (one project)
 
 Run from **your project root**. Adjust the path to this repo if needed.
 
-**Windows**
+**Kiro project**
 
 ```powershell
+# Windows
 $SRC = "..\ai-guided-coding-skills"
-
 New-Item -ItemType Directory -Force -Path ".\.kiro\skills", ".\.kiro\agents", ".\.kiro\steering" | Out-Null
 Copy-Item -Path "$SRC\skills\*" -Destination ".\.kiro\skills\" -Recurse -Force
 Copy-Item -Path "$SRC\agents\guided.json" -Destination ".\.kiro\agents\" -Force
 Copy-Item -Path "$SRC\steering\ponytail.md" -Destination ".\.kiro\steering\" -Force
 ```
 
-**macOS**
-
 ```bash
+# macOS — Kiro project
 SRC=../ai-guided-coding-skills
-
 mkdir -p .kiro/skills .kiro/agents .kiro/steering
 cp -R "$SRC"/skills/* .kiro/skills/
 cp "$SRC"/agents/guided.json .kiro/agents/
 cp "$SRC"/steering/ponytail.md .kiro/steering/
 ```
+
+**Zed / OpenCode project** (Agent Skills standard)
+
+```powershell
+# Windows
+$SRC = "..\ai-guided-coding-skills"
+New-Item -ItemType Directory -Force -Path ".\.agents\skills" | Out-Null
+Copy-Item -Path "$SRC\skills\*" -Destination ".\.agents\skills\" -Recurse -Force
+```
+
+```bash
+# macOS — Zed / OpenCode project
+SRC=../ai-guided-coding-skills
+mkdir -p .agents/skills
+cp -R "$SRC"/skills/* .agents/skills/
+```
+
+OpenCode project-native path is also `.opencode/skills` if you prefer that over `.agents/skills`.
 
 ---
 
@@ -233,31 +300,22 @@ git pull
 
 ## Check it worked
 
-### Windows paths
+| Tool | Windows check file | macOS check file |
+|------|--------------------|------------------|
+| Kiro | `C:\Users\You\.kiro\skills\guided-coding\SKILL.md` | `~/.kiro/skills/guided-coding/SKILL.md` |
+| Grok | `C:\Users\You\.grok\skills\guided-coding\SKILL.md` | `~/.grok/skills/guided-coding/SKILL.md` |
+| OpenCode | `C:\Users\You\.config\opencode\skills\guided-coding\SKILL.md` | `~/.config/opencode/skills/guided-coding/SKILL.md` |
+| Zed | `C:\Users\You\.agents\skills\guided-coding\SKILL.md` | `~/.agents/skills/guided-coding/SKILL.md` |
 
-| Check | Path |
-|-------|------|
-| Kiro skill | `C:\Users\YourName\.kiro\skills\guided-coding\SKILL.md` |
-| Kiro agent | `C:\Users\YourName\.kiro\agents\guided.json` |
-| Grok skill | `C:\Users\YourName\.grok\skills\guided-coding\SKILL.md` |
-
-### macOS paths
-
-| Check | Path |
-|-------|------|
-| Kiro skill | `~/.kiro/skills/guided-coding/SKILL.md` |
-| Kiro agent | `~/.kiro/agents/guided.json` |
-| Grok skill | `~/.grok/skills/guided-coding/SKILL.md` |
-
-In chat, type `/` — you should see guided skills like `/guided-coding`.
+In chat / agent panel, look for skills like `/guided-coding` or ask the agent to use `guided-coding`.
 
 ---
 
 ## Repo layout
 
 ```
-install.ps1             ← Windows installer
-install.sh              ← macOS / Linux installer
+install.ps1             ← Windows installer (all tools)
+install.sh              ← macOS / Linux installer (all tools)
 skills/                 ← install from here (all guided skills)
 agents/guided.json      ← Kiro guided agent
 steering/ponytail.md    ← Kiro always-on style
@@ -273,7 +331,7 @@ README.md
 1. **Documentation is Truth** — official library docs → project convention → canonical structure  
 2. **Ponytail ladder** — skip → reuse → stdlib → platform → existing dep → one-liner → absolute minimum  
 3. **Lazy ≠ negligent** — keep validation, security, error handling, accessibility  
-4. **Project memory** — skills may use `.kiro/project-memory.md` or `.grok/project-memory.md`
+4. **Project memory** — skills may use `.kiro/project-memory.md`, `.grok/project-memory.md`, or project notes your tool already reads
 
 ---
 
