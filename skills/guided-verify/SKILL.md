@@ -77,7 +77,29 @@ Framework-aware checks (Django, Laravel, Next.js, etc.) activate automatically w
    - Re-run only the failed check.
 
 5. **Close**  
-   When the relevant checks are green, declare the loop closed. Stop. Do not invent extra work.
+   When the relevant checks are green, show the short Done checklist and wait for human confirmation:
+
+   ```
+   Done?
+   - [ ] Relevant tests / checks are green
+   - [ ] Database invariants hold (if any)
+   - [ ] Events use Transactional Outbox (if any)
+   - [ ] I understand the key decisions
+   ```
+
+   Only after the human confirms does the AI declare the loop closed. Stop. Do not invent extra work.
+
+## CI/CD pipelines (when asked)
+
+When the human asks for a CI/CD pipeline, GitHub Actions, or “what should run on push/PR”:
+
+1. Load the reference: `references/ecc-ci-cd.md`
+2. Detect the project’s real package manager, test scripts, and language from project memory / codebase.
+3. Show the **smallest complete pipeline** that matches the project (usually the test job first).
+4. Human creates `.github/workflows/ci.yml` and types the content.
+5. Offer to refine after they paste their version or after the first run fails.
+
+Never create the workflow file yourself unless the human explicitly asks.
 
 ## Output format
 

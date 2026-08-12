@@ -1,104 +1,107 @@
 # AI Guided Coding Skills
 
-Lean coaching skills and a `guided` agent for **Kiro** and **Grok**.
+Coaching skills for **Kiro** and **Grok** that keep **you** writing the code.
 
-**Core contract (all skills + agent)**
+| AI does | You do |
+|---------|--------|
+| Shows the complete minimal solution | Type every line |
+| Plans, reviews, and verifies | Own the production code |
 
-- AI **shows** the complete minimal correct solution / plan / findings
-- Human **types** every change
-- AI never edits the codebase
-
-Supported tools on this repo: **Kiro** and **Grok** only.
+AI never edits your repo. You learn by typing, not by accepting patches.
 
 ---
 
-## What’s inside
+## Quick start
 
-```
-skills/                 Guided family skills
-agents/guided.json      Guided coaching agent (Kiro)
-steering/ponytail.md    Always-on Ponytail style (Kiro)
-README.md               This setup guide
-```
+1. [Clone the repo](#1-clone)
+2. Install for [Kiro](#2a-kiro) and/or [Grok](#2b-grok)
+3. Restart the tool (or open a new chat)
+4. Run: `/guided-docs` or `/guided-coding`
 
-### Skills
+**Need both tools?** Install both — they use different folders and do not conflict.
 
-| Skill | Role |
-|-------|------|
-| `guided-docs` | Mental model / key things to remember |
-| `guided-plan` | Short / architecture / full plan |
-| `guided-planner` | Planner companion (deeper plan) |
-| `guided-coding` | Implementation + Strong TDD |
-| `guided-tdd` | Pure test-first coaching |
-| `guided-refactoring` | Clean vibe-coded / messy code |
-| `guided-review` | Quality + security review |
-| `guided-code-reviewer` | Code-review companion |
-| `guided-verify` | Verification commands + expected results |
+---
 
-### Happy path
+## Happy path
 
 ```
 guided-docs → guided-plan → guided-coding → guided-review → guided-verify
 ```
 
-Use `guided-refactoring` when surrounding code is messy.  
-Use `guided-tdd` when you want pure red → green → refactor.
+| When… | Use |
+|-------|-----|
+| Learning a library or codebase | `guided-docs` |
+| Need a plan before code | `guided-plan` |
+| Implementing a feature / bugfix | `guided-coding` |
+| Code is messy / vibe-coded | `guided-refactoring` |
+| Pure test-first coaching | `guided-tdd` |
+| Quality + security review | `guided-review` |
+| Confirm tests / checks are green | `guided-verify` |
 
 ---
 
-## Setup on any laptop
+## What’s new (vNext)
 
-Works on **Windows**, **macOS**, and **Linux**.  
-You only need **Git** and either **Kiro**, **Grok**, or both.
+Core skills now include:
 
-### 1. Prerequisites
+- **Human Design Support** — AI implements *your* design, not a different architecture
+- **Active Confirmation Gate** — short “why does this matter?” checks on security, auth, and DB rules
+- **Database invariants** — constraints shown as real migrations/DDL, not only app checks
+- **Transactional Outbox** — default for “write DB + publish event” flows
+- **Done checklist** — slice is finished only after behavior, invariants, and understanding are confirmed
 
-1. Install [Git](https://git-scm.com/downloads) if you don’t have it.
-2. Install the tool you use:
-   - **Kiro** — install the Kiro app/IDE for your OS
-   - **Grok** — install Grok CLI / Grok Build for your OS
-3. Open a terminal:
-   - Windows: **PowerShell**
-   - macOS / Linux: **Terminal** (bash or zsh)
+---
 
-### 2. Clone this repository
+## Skills
+
+| Skill | Role |
+|-------|------|
+| `guided-docs` | Mental model and key things to remember |
+| `guided-plan` | Short or full testable plan |
+| `guided-planner` | Deeper planner companion |
+| `guided-coding` | Implementation + strong TDD |
+| `guided-tdd` | Pure red → green → refactor |
+| `guided-refactoring` | Clean messy / vibe-coded code |
+| `guided-review` | Quality + security review |
+| `guided-code-reviewer` | Code-review companion |
+| `guided-verify` | Commands, expected results, minimal fixes |
+
+Install always copies from the `skills/` folder (canonical source).
+
+---
+
+## 1. Clone
 
 ```bash
 git clone https://github.com/Estillore/ai-guided-coding-skills.git
 cd ai-guided-coding-skills
 ```
 
-Keep this folder. You will copy files from it into Kiro/Grok folders.
+You need **Git** plus **Kiro**, **Grok**, or both.
+
+| OS | Terminal |
+|----|----------|
+| Windows | PowerShell |
+| macOS / Linux | Terminal (bash or zsh) |
 
 ---
 
-## Setup for Kiro
+## 2a. Kiro
 
-Kiro reads skills, agents, and steering from your user home (global) or the project (workspace).
+### Global install (recommended — all projects)
 
-### Option A — Global install (recommended)
-
-Use this so skills work in **every** Kiro project on this laptop.
-
-#### Windows (PowerShell)
+**Windows (PowerShell)**
 
 ```powershell
 cd ai-guided-coding-skills
 
-# Skills
-New-Item -ItemType Directory -Force -Path "$HOME\.kiro\skills" | Out-Null
+New-Item -ItemType Directory -Force -Path "$HOME\.kiro\skills", "$HOME\.kiro\agents", "$HOME\.kiro\steering" | Out-Null
 Copy-Item -Path ".\skills\*" -Destination "$HOME\.kiro\skills\" -Recurse -Force
-
-# Agent
-New-Item -ItemType Directory -Force -Path "$HOME\.kiro\agents" | Out-Null
 Copy-Item -Path ".\agents\guided.json" -Destination "$HOME\.kiro\agents\" -Force
-
-# Steering (always-on Ponytail)
-New-Item -ItemType Directory -Force -Path "$HOME\.kiro\steering" | Out-Null
 Copy-Item -Path ".\steering\ponytail.md" -Destination "$HOME\.kiro\steering\" -Force
 ```
 
-#### macOS / Linux
+**macOS / Linux**
 
 ```bash
 cd ai-guided-coding-skills
@@ -109,25 +112,19 @@ cp agents/guided.json ~/.kiro/agents/
 cp steering/ponytail.md ~/.kiro/steering/
 ```
 
-#### What gets installed (Kiro global)
-
-| From this repo | Goes to |
-|----------------|---------|
+| From this repo | Installs to |
+|----------------|-------------|
 | `skills/*` | `~/.kiro/skills/` |
 | `agents/guided.json` | `~/.kiro/agents/guided.json` |
 | `steering/ponytail.md` | `~/.kiro/steering/ponytail.md` |
 
-On Windows, `~` is your user folder (e.g. `C:\Users\YourName`).
+### One project only (workspace)
 
-### Option B — Workspace only (one project)
+Run from **your project root** (adjust `$SRC` / `SRC` if the clone is elsewhere):
 
-Use this if you only want the guided family inside **one** project.
-
-#### Windows (PowerShell) — run from your project root
+**Windows**
 
 ```powershell
-# From your project folder (not necessarily this repo)
-# Assume this repo is cloned at ..\ai-guided-coding-skills (adjust path if needed)
 $SRC = "..\ai-guided-coding-skills"
 
 New-Item -ItemType Directory -Force -Path ".\.kiro\skills", ".\.kiro\agents", ".\.kiro\steering" | Out-Null
@@ -136,10 +133,10 @@ Copy-Item -Path "$SRC\agents\guided.json" -Destination ".\.kiro\agents\" -Force
 Copy-Item -Path "$SRC\steering\ponytail.md" -Destination ".\.kiro\steering\" -Force
 ```
 
-#### macOS / Linux — run from your project root
+**macOS / Linux**
 
 ```bash
-SRC=../ai-guided-coding-skills   # adjust if needed
+SRC=../ai-guided-coding-skills
 
 mkdir -p .kiro/skills .kiro/agents .kiro/steering
 cp -R "$SRC"/skills/* .kiro/skills/
@@ -147,31 +144,19 @@ cp "$SRC"/agents/guided.json .kiro/agents/
 cp "$SRC"/steering/ponytail.md .kiro/steering/
 ```
 
-### Finish Kiro setup
+### Check Kiro
 
-1. Restart Kiro, or open a **new chat**.
-2. Type `/` in chat — you should see skills like `/guided-coding`, `/guided-docs`, etc.
-3. Start with:
-
-```
-/guided-docs
-```
-
-or
-
-```
-/guided-coding
-```
+1. Restart Kiro or open a **new chat**
+2. Type `/` — you should see `/guided-coding`, `/guided-docs`, etc.
+3. Start with `/guided-docs` or `/guided-coding`
 
 ---
 
-## Setup for Grok
-
-Grok discovers skills from `~/.grok/skills/` (user-level).
+## 2b. Grok
 
 ### Global install (recommended)
 
-#### Windows (PowerShell)
+**Windows (PowerShell)**
 
 ```powershell
 cd ai-guided-coding-skills
@@ -180,7 +165,7 @@ New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
 Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
 ```
 
-#### macOS / Linux
+**macOS / Linux**
 
 ```bash
 cd ai-guided-coding-skills
@@ -189,53 +174,40 @@ mkdir -p ~/.grok/skills
 cp -R skills/* ~/.grok/skills/
 ```
 
-#### What gets installed (Grok)
-
-| From this repo | Goes to |
-|----------------|---------|
+| From this repo | Installs to |
+|----------------|-------------|
 | `skills/*` | `~/.grok/skills/` |
 
-### Finish Grok setup
+> **Note:** `agents/guided.json` and `steering/ponytail.md` are for **Kiro**.  
+> Grok loads coaching rules from each skill’s `SKILL.md` under `~/.grok/skills/`.
 
-1. Restart Grok / open a new session if skills don’t appear.
-2. Invoke a skill by name, for example:
+### Check Grok
 
-```
-/guided-coding
-```
-
-or ask in natural language:
-
-```
-Use guided-coding to help me implement this feature step by step.
-```
-
-> **Note:** The `agents/guided.json` and `steering/ponytail.md` files are for **Kiro**.  
-> Grok uses the skills under `~/.grok/skills/` (coaching rules live inside each skill’s `SKILL.md`).
+1. Restart Grok or start a new session
+2. Run `/guided-coding`, or ask:  
+   `Use guided-coding to help me implement this feature step by step.`
 
 ---
 
-## Install both Kiro and Grok on the same laptop
+## Install Kiro + Grok together
 
-You can install both. They use **different folders** and do not conflict.
-
-#### Windows (PowerShell)
+**Windows**
 
 ```powershell
 cd ai-guided-coding-skills
 
-# --- Kiro ---
+# Kiro
 New-Item -ItemType Directory -Force -Path "$HOME\.kiro\skills", "$HOME\.kiro\agents", "$HOME\.kiro\steering" | Out-Null
 Copy-Item -Path ".\skills\*" -Destination "$HOME\.kiro\skills\" -Recurse -Force
 Copy-Item -Path ".\agents\guided.json" -Destination "$HOME\.kiro\agents\" -Force
 Copy-Item -Path ".\steering\ponytail.md" -Destination "$HOME\.kiro\steering\" -Force
 
-# --- Grok ---
+# Grok
 New-Item -ItemType Directory -Force -Path "$HOME\.grok\skills" | Out-Null
 Copy-Item -Path ".\skills\*" -Destination "$HOME\.grok\skills\" -Recurse -Force
 ```
 
-#### macOS / Linux
+**macOS / Linux**
 
 ```bash
 cd ai-guided-coding-skills
@@ -253,56 +225,51 @@ cp -R skills/* ~/.grok/skills/
 
 ---
 
-## How to update later
-
-On any laptop, pull the latest and re-copy:
+## Update later
 
 ```bash
 cd ai-guided-coding-skills
 git pull
 ```
 
-Then re-run the **Kiro** and/or **Grok** copy commands from above (same as install).
+Then re-run the same **Kiro** and/or **Grok** copy commands from above.
 
 ---
 
-## Quick check (did it work?)
+## Paths cheat sheet
 
-### Kiro
+| Shortcut | Windows | macOS / Linux |
+|----------|---------|----------------|
+| Home | `C:\Users\YourName` | `/Users/you` or `/home/you` |
+| Kiro skills | `%USERPROFILE%\.kiro\skills` | `~/.kiro/skills` |
+| Grok skills | `%USERPROFILE%\.grok\skills` | `~/.grok/skills` |
 
-- Folder exists: `~/.kiro/skills/guided-coding/SKILL.md`
-- Agent exists: `~/.kiro/agents/guided.json`
-- In chat, `/` shows guided skills
+**Sanity check files**
 
-### Grok
+- Kiro: `~/.kiro/skills/guided-coding/SKILL.md` and `~/.kiro/agents/guided.json`
+- Grok: `~/.grok/skills/guided-coding/SKILL.md`
 
-- Folder exists: `~/.grok/skills/guided-coding/SKILL.md`
-- Skill commands or natural-language “use guided-coding” work
+---
 
-### Windows path reminder
+## Repo layout
 
-| Shortcut | Typical path |
-|----------|----------------|
-| `$HOME` / `~` | `C:\Users\YourName` |
-| Kiro skills | `C:\Users\YourName\.kiro\skills` |
-| Grok skills | `C:\Users\YourName\.grok\skills` |
-
-### macOS / Linux path reminder
-
-| Shortcut | Typical path |
-|----------|----------------|
-| `~` | `/Users/you` (macOS) or `/home/you` (Linux) |
-| Kiro skills | `~/.kiro/skills` |
-| Grok skills | `~/.grok/skills` |
+```
+skills/                 ← install from here (all guided skills)
+agents/guided.json      ← Kiro guided agent
+steering/ponytail.md    ← Kiro always-on style
+guided-*/               ← core workflow skills (same content as skills/)
+backup-old/             ← previous snapshot (reference only)
+README.md
+```
 
 ---
 
 ## Principles
 
-1. **Documentation is Truth** — official library docs first, then project convention, then canonical structure  
+1. **Documentation is Truth** — official library docs → project convention → canonical structure  
 2. **Ponytail ladder** — skip → reuse → stdlib → platform → existing dep → one-liner → absolute minimum  
 3. **Lazy ≠ negligent** — keep validation, security, error handling, accessibility  
-4. **Project memory** — skills may use `.kiro/project-memory.md` (Kiro) or `.grok/project-memory.md` (Grok)
+4. **Project memory** — skills may use `.kiro/project-memory.md` or `.grok/project-memory.md`
 
 ---
 

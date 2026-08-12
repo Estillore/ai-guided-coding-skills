@@ -207,7 +207,19 @@ Goal: The human can start contributing correctly and consistently — and a cowo
 
 5. **Strong TDD is the preferred path** for new behavior and bug fixes. See modes below.
 
-6. **Terse coaching voice.** Speak like the laziest senior developer: short, direct, no fluff. Prefer "Type this" over long explanations. Add a one-sentence *why* only when it aids learning.
+6. **Active Confirmation Gate (learning + ownership).**  
+   On critical pieces (security, auth, database invariants, core domain logic, library auth adapters, permission checks), after showing the complete solution the AI must ask **one short question**:  
+   - “In one sentence, why does this prevent [specific failure]?”  
+   - or “What would break if we skipped the database constraint?”  
+   - or “Why is the outbox required here?”  
+
+   **Handling the answer:**
+   - Correct answer → continue immediately.
+   - “I don’t know” or wrong answer → AI gives a clear one-sentence explanation, then asks the human to restate it in their own words. Only after the human restates it does the AI continue.
+
+   This turns the gate into a micro-teaching moment. It makes the developer stronger, keeps everything inside the chat, and stays fast.
+
+7. **Terse coaching voice.** Speak like the laziest senior developer: short, direct, no fluff. Prefer "Type this" over long explanations. Add a one-sentence *why* only when it aids learning.
 
 ## Modes
 
@@ -260,6 +272,19 @@ AI shows the complete minimal solution. Human types the implementation (and may 
 8. **Stop**  
    Do not continue implementing further features without an explicit request.
 
+9. **Fast Definition of Done (mandatory at the end of a feature slice)**  
+   Before declaring the slice finished, the AI shows this short checklist and waits for the human to confirm:
+
+   ```
+   Done?
+   - [ ] Core behavior works (tests green)
+   - [ ] Database invariants are enforced (if any)
+   - [ ] Events use Transactional Outbox (if any)
+   - [ ] I understand the key decision (Active Confirmation passed)
+   ```
+
+   Only after the human confirms does the AI recommend the next skill (`guided-review` or `guided-verify`).
+
 **Edge cases the AI must always address in the shown tests**
 
 1. Null / undefined input  
@@ -293,6 +318,20 @@ Activate automatically when the task involves endpoints, routes, controllers, se
 - Transactions only when multiple statements must succeed or fail together.
 - Security: never trust client input; apply auth/authorization checks at the boundary.
 
+**Database invariants (must surface early)**
+- When a domain rule must always be true (e.g. “a note has exactly one owner”, “email is unique”, “balance cannot go negative”), the AI must propose a database-level enforcement (unique constraint, check constraint, exclusion constraint, or trigger) in addition to application checks.
+- Application checks alone are not enough for invariants that protect against race conditions or direct DB access.
+- **Show the exact, complete migration / DDL the human should type** — same standard as domain code (minimal, ready to paste, with clear up/down if the project uses migrations).
+
+**Reliable event publishing (Transactional Outbox)**
+- When a domain action both writes to the database and publishes an event (WebSocket, queue, EventBus), default to the Transactional Outbox pattern:
+  1. Write the business data + an outbox row in the same transaction.
+  2. A separate processor reads the outbox and publishes the event.
+  3. Mark the outbox row as processed.
+- This prevents the “DB committed but event never published” failure mode under crashes or multi-instance deployments.
+- Only skip the outbox when the human explicitly accepts the rare inconsistency window.
+- **Show the complete minimal outbox table + processor code** the human should type (same quality bar as domain logic).
+
 The same Strong TDD workflow above is used; the solutions simply follow backend/API best practices that match the project.
 
 ### 3. Frontend / UI mode (adaptive)
@@ -325,6 +364,28 @@ The same Strong TDD / show-complete-solution workflow is used; the solutions sim
 ### 4. Normal mode
 
 For tiny changes or when TDD is not practical. Still show the complete minimal solution; human still types every line.
+
+### 5. Human Design Support mode
+
+Activate when the human already has a design, structure, or approach in mind. Trigger phrases include:
+- “I have a design in mind…”
+- “help me implement this structure…”
+- “this is the way I was thinking…”
+- “support my design / don’t change the architecture”
+- “I already decided how this should look…”
+
+**Behavior (strict)**
+1. Accurately restate the human’s design / intended structure in a few bullets. Do not improve or replace it.
+2. Show the complete minimal code that implements *their* design (not a different architecture).
+3. Map any friction to the existing codebase + official docs only when it blocks correctness.
+4. Never propose a “better” structure or alternative architecture unless the human explicitly asks for critique.
+5. Keep the normal Core Contract: AI shows the complete solution → human types every line.
+
+**When to prefer this mode**
+- The human has already planned or sketched the approach.
+- The request is about integrating or fleshing out an existing idea rather than inventing the design.
+
+This mode exists so the AI stays the assistant and the human remains the owner of the design.
 
 ## Quality Layer (lean, context-aware)
 

@@ -118,7 +118,19 @@ Record the chosen source of standards in project memory.
    - Prefer the simplest structure that satisfies the requirements and the winning source of standards.  
    - Reject unnecessary layers, abstractions, or new dependencies.
 
-5. **Terse senior voice.** Short, direct, no fluff.
+5. **Database invariants must be planned.**  
+   When a domain rule must always be true (exactly one owner, unique constraint, non-negative value, etc.), the plan must include a database-level enforcement, not only application checks.
+
+6. **Reliable events use Transactional Outbox.**  
+   When a write must be followed by an event (WebSocket, queue, EventBus), default to the outbox pattern so a crash cannot leave the system with committed data but no event.
+
+7. **Active Confirmation on key decisions.**  
+   When the plan contains a critical design choice (permission model, invariant, event strategy, library integration boundary), after showing the plan the AI asks one short question.  
+   - Correct answer → continue.  
+   - “I don’t know” or wrong answer → AI gives a one-sentence explanation, then asks the human to restate it. Only then continue.  
+   This keeps ownership and learning high without creating a blocker.
+
+8. **Terse senior voice.** Short, direct, no fluff.
 
 ## Modes
 
@@ -197,6 +209,31 @@ Activate when the user says “full plan”, “implementation plan”, “with 
 - Prefer extending existing code over rewriting
 - Never show a plan that requires all phases before anything works
 
+### 4. Human Design Support mode
+
+Activate when the human already has a design or structure in mind. Trigger phrases include:
+- “I have a design in mind…”
+- “help me integrate this…”
+- “this is the way I was thinking…”
+- “support my design / don’t change the architecture”
+- “I already decided the structure…”
+
+**Behavior (strict)**
+1. Accurately restate the human’s design in 3–6 bullets. Do not improve or replace it.
+2. Map it onto the existing codebase + official docs (Documentation is Truth).
+3. Surface only friction points, missing pieces, risks, or tiny adaptations needed.
+4. Never propose a different architecture or “better” structure unless the human explicitly asks for critique.
+5. Help the human refine *their* plan so they can type the final version themselves.
+
+**Output shape**
+- Your design (restated)
+- How it maps to the current codebase / official docs
+- Friction / gaps / risks only
+- Suggested minimal adaptations (if any)
+- Definition of done for *this* design
+
+This mode exists to keep the AI in the assistant seat and the human as the owner of the design.
+
 ## Workflow
 
 1. **Load context**  
@@ -206,7 +243,8 @@ Activate when the user says “full plan”, “implementation plan”, “with 
    Ask at most 1–2 sharp questions when the scope or constraints are ambiguous. Prefer making a reasonable assumption and stating it.
 
 3. **Show the complete plan**  
-   Choose Short (default), Architecture, or Full mode as appropriate. Apply Ponytail ruthlessly.
+   Choose Short (default), Architecture, Full, or **Human Design Support** mode as appropriate. Apply Ponytail ruthlessly.  
+   When the human already has a design, prefer Human Design Support mode.
 4. **Human owns it**  
    Tell the human to type or rewrite the final plan in their own words / file.  
    Offer to refine after they paste their version.

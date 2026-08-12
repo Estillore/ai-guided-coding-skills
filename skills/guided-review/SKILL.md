@@ -90,6 +90,8 @@ Uses code-reviewer style thinking:
 - Clarity and structure
 - Project convention mismatches
 - Unnecessary complexity (Ponytail violations)
+- **Missing database invariants** — domain rules that must always hold (exactly one owner, unique email, non-negative balance, etc.) but are only enforced in application code. Prefer DB constraints.
+- **Missing Transactional Outbox** — when a write is followed by an event publish (WebSocket, queue, EventBus) without an outbox, flag the crash window.
 
 ### 2. Security review
 Uses security-reviewer style thinking:
@@ -98,6 +100,7 @@ Uses security-reviewer style thinking:
 - Injection, XSS, CSRF, secret exposure
 - Insecure defaults and missing safeguards
 - Data leakage
+- Privilege escalation paths that rely only on application checks
 
 ### 3. Combined review
 Run both when the human asks for a full scan or when the change touches auth, payments, user data, or external input.
