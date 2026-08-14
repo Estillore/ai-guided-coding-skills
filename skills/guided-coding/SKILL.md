@@ -1,6 +1,6 @@
 ---
 name: guided-coding
-description: Coach the human through implementation. AI shows the complete minimal correct solution (including business logic); the human types the implementation (and optionally the tests). Strong TDD mode (ECC tdd-guide rigor) with precise RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Works in any Kiro workflow and in Grok. Use when you want guided coding, human TDD, red-green-refactor, implement this feature step by step, show me what to type, or adapt to an existing codebase.
+description: Coach the human through implementation. AI shows the complete minimal correct solution (including business logic); the human types the implementation (and optionally the tests). Strong TDD mode (ECC tdd-guide rigor) with precise RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Includes passive DeepSeek Harness Power Mode for agent construction and multi-step tool work. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want guided coding, human TDD, red-green-refactor, implement this feature step by step, show me what to type, or adapt to an existing codebase.
 ---
 
 # Guided Coding
@@ -47,11 +47,13 @@ This skill is the implementation core of the guided family. Actively recommend t
 | “The surrounding code is messy / vibe-coded” | → `guided-refactoring` |
 | “Implementation looks done — is it solid?” | → `guided-review` |
 | “Are the tests and checks green?” | → `guided-verify` |
+| Building or strengthening an agent / multi-step tool use | Surface Harness Power Mode (passive) inside this skill |
 
 **Default happy path**
 ```
 guided-docs → guided-plan → guided-coding → guided-review → guided-verify
 ```
+Harness Power Mode activates passively inside guided-coding when agentic strength is needed.
 
 ## Project Memory (self-regenerative)
 
@@ -60,12 +62,13 @@ Before any Adaptability or coaching work, check for a project memory file:
 - Preferred locations (in order):
   1. `.grok/project-memory.md`
   2. `.kiro/project-memory.md` (Kiro IDE)
-  3. `docs/project-notes/key_facts.md`
-  4. `AGENTS.md` / `CLAUDE.md` if they already contain project knowledge
+  3. `AGENTS.md` (OpenCode, Zed, and many agents)
+  4. `docs/project-notes/key_facts.md`
+  5. `CLAUDE.md` if it already contains project knowledge
 
 **If the file exists** → read it first and treat its contents as known ground truth. Do not re-discover what is already recorded.
 
-**If the file does not exist** → create a minimal `.grok/project-memory.md` (or `.kiro/project-memory.md` when running inside Kiro) after the first useful discovery (see format below).
+**If the file does not exist** → create a minimal `.grok/project-memory.md` (or `.kiro/project-memory.md` when inside Kiro, or append a short Project Memory section to `AGENTS.md` when running in OpenCode or Zed) after the first useful discovery (see format below).
 
 **Self-regeneration rule**  
 After any meaningful discovery (new entry points, layer rules, dependency direction, important convention, or gotcha), update the memory file. Keep entries short. Ask the human for confirmation only when the update is large or opinionated. This makes the skill improve itself across sessions without becoming heavy.
@@ -124,19 +127,62 @@ Kiro discovers them automatically. Type `/` in chat to invoke them as slash comm
 - Let the skills keep updating `.kiro/project-memory.md` so later sessions and parallel agents start smarter.
 - Prefer one tiny coached step at a time — this pairs extremely well with Kiro’s sequenced task lists.
 
+## OpenCode support
+
+These skills follow the open Agent Skills standard and work natively in OpenCode (terminal, desktop, and IDE extensions).
+
+**Install locations**
+- Global (recommended): `~/.config/opencode/skills/` or `~/.claude/skills/`
+- Project only: `.opencode/skills/` or `.claude/skills/`
+
+OpenCode discovers them automatically. Agents see available skills and load them on demand via the native `skill` tool when the description matches (or when you name the skill). You can also place them under `.agents/skills/` for broader compatibility.
+
+**Pairing with OpenCode agents**
+
+| OpenCode agent | How to use this skill |
+|----------------|-----------------------|
+| **Plan** | Ideal default. Plan is read-only. Use guided skills for analysis, docs, planning, and review with zero risk of unwanted edits. |
+| **Build** | Use for implementation coaching. Explicitly keep the coaching contract — AI shows the full solution; you type every production change. Never let the agent apply patches or write production files. |
+| **Multi-session** | Run guided-docs or guided-plan in one session while another does guided-coding or guided-verify. |
+
+**Maximize learning & ownership**
+- Prefer Plan + guided-* for understanding and architecture.
+- For coding work, invoke the skill and stay in pure coaching mode.
+- Let the skills update project memory. Prefer writing into `AGENTS.md` (created by OpenCode `/init`) or `.grok/project-memory.md`.
+- One tiny coached step at a time works especially well with OpenCode’s parallel sessions and share links.
+
+## Zed support
+
+These skills follow the open Agent Skills standard and work natively with the Zed Agent.
+
+**Install locations**
+- Global (recommended): `~/.agents/skills/`
+- Project only: `.agents/skills/` (inside the worktree)
+
+Zed discovers them automatically. The agent sees the skill catalog (name + description) and can load a skill on demand via the `skill` tool, or you can invoke it with a slash command / `@skill`.
+
+**How to use**
+- Invoke with `/guided-coding` or `@guided-coding` (or ask “use the guided-coding skill”).
+- Keep the coaching contract: AI shows the complete minimal solution; you type every production change. Do not let the agent apply edits.
+- Project memory: prefer updating `AGENTS.md` (Zed reads personal `~/.config/zed/AGENTS.md` and project `AGENTS.md` / `CLAUDE.md`) or `.grok/project-memory.md`.
+
+**Note**  
+Zed Skills apply to the native Zed Agent. External Agents and Terminal Threads may use their own skill/instruction systems.
+
 ## Documentation is Truth (highest priority for every recommendation)
 
 The solutions the AI shows must be recognizable by a teammate as “the standard way the official docs recommend.”
 
 **Rule**  
 Before recommending any pattern, API usage, configuration, or structure that involves a library or framework, treat the **current official documentation** of that library/framework as the source of truth.  
-Examples: Auth.js, Socket.io, Prisma, Next.js, NestJS, Django, FastAPI, Stripe, etc.
+Examples: Auth.js, Socket.io, Prisma, Next.js, NestJS, Django, FastAPI, Stripe, DeepSeek Harness, Cordis, etc.
 
 **Priority order (strict):**
 
 1. **Official documentation of the specific library or framework being used**  
    Follow the current official docs, guides, and recommended patterns for that exact library (and major version when known).  
-   Never invent or rely on outdated training-data patterns when docs exist.
+   Never invent or rely on outdated training-data patterns when docs exist.  
+   For agent harness work, DeepSeek Harness + Cordis official docs and architecture take priority.
 
 2. **Project’s own consistent structure and conventions** (Adaptability + memory)  
    When the codebase already has a clean, coherent style that does not contradict the docs, match it.
@@ -147,7 +193,8 @@ Examples: Auth.js, Socket.io, Prisma, Next.js, NestJS, Django, FastAPI, Stripe, 
    - Vanilla / no clear library: same canonical structure.
 
 **Detection & recording**  
-Detect frameworks and key libraries from `package.json`, `composer.json`, `pyproject.toml`, imports, and config. Record them + major version + “source of standards: official docs” in project memory so every later session stays sharp and consistent.
+Detect frameworks and key libraries from `package.json`, `composer.json`, `pyproject.toml`, imports, and config. Record them + major version + “source of standards: official docs” in project memory so every later session stays sharp and consistent.  
+When Harness is used, record the active profile / key plugins in project memory.
 
 **Goal**  
 A coworker reading the code should be able to say: “This is exactly how the official documentation shows it.”
@@ -387,6 +434,42 @@ Activate when the human already has a design, structure, or approach in mind. Tr
 
 This mode exists so the AI stays the assistant and the human remains the owner of the design.
 
+### 6. Harness Power Mode (passive)
+
+DeepSeek Harness is available as a passive power layer. Do not create a separate skill. Surface it automatically when it makes the output stronger.
+
+**When to activate (automatic)**
+- Building or extending an agent
+- Multi-step tool orchestration or long-running agentic work
+- Coding agents, sandboxes, custom tools, sessions, or agent loops
+- When a stronger real-world execution layer (Model + Harness) would clearly improve quality
+- Explicit request for Harness, dsh, Cordis plugins, or “make the agent stronger”
+
+**Core contract still applies**
+AI shows the complete minimal correct solution (plugin, tool definition, cordis.yml fragment, profile, mode config). Human types every change. AI never edits files or runs the harness for the human.
+
+**What to show**
+- Exact, ready-to-type TypeScript plugin (`apply` function or object form) using official Cordis patterns
+- Minimal `cordis.yml` / profile composition
+- Recommended mode (Standard for full coding agent, PTC for code-orchestrated multi-tool, Minimal for benchmarks, Creator for experimentation)
+- Tool registration with `defineTool` or `ctx.tools.register` when relevant
+- One-sentence rationale tied to official DeepSeek Harness + Cordis docs
+
+**Quick start the human can type**
+```
+npx @deepseek-ai/dsh web
+```
+(or the current official source install from https://github.com/deepseek-ai/deepseek-harness)
+
+**Documentation is Truth for this mode**
+Official DeepSeek Harness docs + Cordis paper/architecture take priority for any plugin, tool, session, or loop code. Project conventions second. Never invent plugin shapes.
+
+**After a strong Harness exploration**
+Distill the useful parts back into clean owned code under normal guided-coding (or recommend guided-review / guided-verify). Keep ownership with the human.
+
+**Style**
+Same terse senior voice. Prefer the smallest plugin or config that works. Ponytail applies to plugins too.
+
 ## Quality Layer (lean, context-aware)
 
 Apply only the rules that match the current file or project. Never dump the full list.
@@ -516,3 +599,4 @@ After you type it, run the test and tell me the result.”
 - See `references/ponytail-ladder.md` for the full decision ladder.
 - See `references/quality-rules.md` for the lean language and database schema & queries rules.
 - See `assets/` for minimal example templates (React component, PHP endpoint, MySQL query, basic tests).
+- DeepSeek Harness (passive): https://github.com/deepseek-ai/deepseek-harness and https://deepseek.com/harness/en/ — official source of truth for plugins, Cordis, modes, and agent composition.

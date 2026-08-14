@@ -1,6 +1,6 @@
 ---
 name: guided-review
-description: Human-driven code review and security review. AI scans with ECC-style confidence filters, shows concrete findings with exact lines and failure modes plus the minimal strengthened version; the human decides and types every fix. Uses project memory and Ponytail minimalism. Works in any Kiro workflow and in Grok. Use for guided review, code review, security review, what should I strengthen, or scan this code.
+description: Human-driven code review and security review. AI scans with ECC-style confidence filters, shows concrete findings with exact lines and failure modes plus the minimal strengthened version; the human decides and types every fix. Uses project memory and Ponytail minimalism. Includes light passive DeepSeek Harness awareness for agent and plugin code. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided review, code review, security review, what should I strengthen, or scan this code.
 ---
 
 # Guided Review
@@ -33,14 +33,16 @@ This skill is the quality and security gate of the guided family. Actively recom
 guided-coding → guided-review → guided-verify
 ```
 
+Harness awareness is passive: when reviewing agent, plugin, or multi-step tool code, apply official DeepSeek Harness + Cordis patterns as the source of truth for findings and minimal strengthened versions.
+
 ## Project Memory (self-regenerative)
 
 Before reviewing, check for project memory:
 
-- Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md`
-- Fallbacks: `AGENTS.md`, `CLAUDE.md`, `docs/project-notes/`
+- Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` (OpenCode)
+- Fallbacks: `CLAUDE.md`, `docs/project-notes/`
 
-Load it first. Respect the project’s own conventions and known decisions. Update the memory only when the review surfaces a new high-value gotcha or convention.
+Load it first. Respect the project’s own conventions and known decisions. Update the memory only when the review surfaces a new high-value gotcha or convention (prefer `AGENTS.md` inside OpenCode).
 
 ## Kiro IDE support
 
@@ -55,6 +57,23 @@ Works in every Kiro environment. Install to `~/.kiro/skills/` or `.kiro/skills/`
 | **Plan** | When the plan has been implemented and needs a review |
 | **Bug Fix** (Debug) | After the fix is written, to catch remaining quality or security issues |
 | **Default** | Any time the human asks “is this solid?” or “what should I strengthen?” |
+
+## OpenCode support
+
+Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also under `.claude/skills/`.
+
+**Pairing with OpenCode agents**
+
+| OpenCode agent | How to use this skill |
+|----------------|-----------------------|
+| **Plan** | Ideal for pure review (read-only by default). |
+| **Build** | Use after changes; keep coaching mode so the human types every accepted fix. |
+
+Update memory into `AGENTS.md` or `.grok/project-memory.md`.
+
+## Zed support
+
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-review` or `@guided-review`. Prefer updating `AGENTS.md`.
 
 ## Core Rules
 

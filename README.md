@@ -128,6 +128,8 @@ guided-docs → guided-plan → guided-coding → guided-review → guided-verif
 
 ## What’s new (vNext)
 
+- **OpenCode + Zed skill text** — `guided-coding`, `guided-plan`, `guided-review`, and `guided-verify` now include native OpenCode and Zed support (install paths, agents, project memory)
+- **Passive DeepSeek Harness** — folded into those four skills (no separate skill). Surfaces automatically for agent / multi-step tool work
 - **Human Design Support** — AI implements *your* design, not a different architecture
 - **Active Confirmation Gate** — short “why does this matter?” checks on security, auth, and DB rules
 - **Database invariants** — constraints shown as real migrations/DDL, not only app checks

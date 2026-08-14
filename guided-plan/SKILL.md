@@ -1,6 +1,6 @@
 ---
 name: guided-plan
-description: Produce a short or full testable plan before any code. AI shows the complete plan (short mode or full ECC-style with phases, risks, mitigations, success criteria); the human types or rewrites their own version. Absorbs architect-level thinking. Uses codebase mapping and self-regenerative project memory. Works in any Kiro workflow (especially Plan and Spec) and in Grok. Use for guided plan, full implementation plan, architecture, short plan before coding, ADR, phased plan, or decide the structure first.
+description: Produce a short or full testable plan before any code. AI shows the complete plan (short mode or full ECC-style with phases, risks, mitigations, success criteria); the human types or rewrites their own version. Absorbs architect-level thinking. Uses codebase mapping and self-regenerative project memory. Includes passive DeepSeek Harness guidance for agent and multi-step tool plans. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for guided plan, full implementation plan, architecture, short plan before coding, ADR, phased plan, or decide the structure first.
 ---
 
 # Guided Plan
@@ -26,13 +26,13 @@ This skill sits between understanding and implementation:
 
 Before planning, check for project memory:
 
-- Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md` (Kiro)
-- Fallbacks: `docs/project-notes/key_facts.md`, `AGENTS.md`, `CLAUDE.md`
+- Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md` (Kiro) or `AGENTS.md` (OpenCode)
+- Fallbacks: `docs/project-notes/key_facts.md`, `CLAUDE.md`
 
 **If present** → load it first and treat it as known ground truth. Do not re-discover known architecture.
 
 **Self-regeneration**  
-After a useful planning session that reveals new architecture facts, decisions, or constraints, update the memory file. Keep entries short and high-value only.
+After a useful planning session that reveals new architecture facts, decisions, or constraints, update the memory file (prefer `.kiro/project-memory.md` inside Kiro, or a Project Memory section in `AGENTS.md` inside OpenCode). Keep entries short and high-value only.
 
 ### Memory file format (keep it tiny)
 
@@ -74,23 +74,41 @@ Works in every Kiro environment via the Agent Skills standard. Install to `~/.ki
 | **Bug Fix** (Debug) | Use for any non-trivial fix that needs a short plan before changing code |
 | **Default** | Use whenever a change is large enough to benefit from a short plan first |
 
+## OpenCode support
+
+Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also works under `.claude/skills/`.
+
+**Pairing with OpenCode agents**
+
+| OpenCode agent | How to use this skill |
+|----------------|-----------------------|
+| **Plan** | Primary home. Use guided-plan to produce the testable plan while staying read-only. |
+| **Build** | Use only after the plan is accepted; switch to guided-coding for the implementation steps. |
+
+Prefer updating `AGENTS.md` (OpenCode `/init`) or `.grok/project-memory.md` so later sessions inherit the architecture decisions.
+
+## Zed support
+
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-plan` or `@guided-plan`. Prefer updating `AGENTS.md` for project memory.
+
 ## Documentation is Truth (highest priority for every recommendation)
 
 Plans must produce code that a teammate will recognize as “the standard way the official docs recommend.”
 
 **Rule**  
-Before recommending any structure, pattern, or integration that involves a library or framework, treat the **current official documentation** of that library/framework as the source of truth (Auth.js, Socket.io, Prisma, Next.js, NestJS, etc.).
+Before recommending any structure, pattern, or integration that involves a library or framework, treat the **current official documentation** of that library/framework as the source of truth (Auth.js, Socket.io, Prisma, Next.js, NestJS, DeepSeek Harness, Cordis, etc.).
 
 **Priority order (strict):**
 
-1. **Official documentation of the specific libraries and framework being used**
+1. **Official documentation of the specific libraries and framework being used**  
+   For agent harness work, DeepSeek Harness + Cordis official docs take priority.
 2. **Project’s own consistent structure** (Adaptability + memory)
 3. **Canonical structure** (only when 1 and 2 are absent)  
    - Frontend: FSD-inspired hybrid (`app/` + `features/` + `entities/` + `shared/`)  
    - Backend: feature modules with internal clean layers (`domain` → `application` → `infrastructure` → `interface`)  
    - Vanilla: same canonical structure.
 
-Record the chosen source of standards in project memory.
+Record the chosen source of standards in project memory. When Harness is recommended, note the suggested mode or key plugins.
 
 ## Adaptability (when planning inside an existing codebase)
 
@@ -156,6 +174,9 @@ Activate when the change is large, cross-cutting, or the human asks for architec
 - Key trade-offs and the recommended decision
 - Migration or sequencing notes if the change is not green-field
 - Still keep it short — architecture mode is denser, not longer for its own sake
+
+**Harness passive note**  
+When the plan involves building or strengthening an agent, multi-step tool use, or long-running agentic behavior, include a short recommended DeepSeek Harness composition (mode + key plugins or profile) using official patterns. Keep it minimal and under the same “AI shows, human owns” contract.
 
 ### 3. Full plan mode (ECC-style)
 
@@ -269,6 +290,8 @@ Always state the recommendation clearly.
 guided-docs → guided-plan → guided-coding → guided-review → guided-verify
                  ↘ guided-refactoring ↗
 ```
+
+Harness guidance surfaces passively inside guided-plan (Architecture mode) and guided-coding (Harness Power Mode) when the work is agentic. No separate skill required.
 
 ## Style
 

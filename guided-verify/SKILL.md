@@ -1,6 +1,6 @@
 ---
 name: guided-verify
-description: Close the loop with evidence. AI shows the exact verification commands, expected results, and the minimal fix for any failure; the human runs the checks and types every fix. Draws on verification-loop, build-error-resolver, and quality surfaces. Uses project memory. Works in any Kiro workflow and in Grok. Use for guided verify, run the checks, are we done, test coverage, or confirm this works.
+description: Close the loop with evidence. AI shows the exact verification commands, expected results, and the minimal fix for any failure; the human runs the checks and types every fix. Draws on verification-loop, build-error-resolver, and quality surfaces. Uses project memory. Includes light passive DeepSeek Harness verification path for agentic work. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided verify, run the checks, are we done, test coverage, or confirm this works.
 ---
 
 # Guided Verify
@@ -18,7 +18,7 @@ This is the final gate of the guided family.
 
 ## Project Memory (self-regenerative)
 
-Load `.grok/project-memory.md` or `.kiro/project-memory.md` first. Use known test commands, scripts, and conventions. Update memory only when a new high-value verification fact appears (e.g. the real way this project runs e2e).
+Load `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` first. Use known test commands, scripts, and conventions. Update memory only when a new high-value verification fact appears (e.g. the real way this project runs e2e). Prefer writing into `AGENTS.md` when running in OpenCode.
 
 ## Kiro IDE support
 
@@ -33,6 +33,23 @@ Works in every Kiro environment. Install to `~/.kiro/skills/` or `.kiro/skills/`
 | **Plan** | After the plan has been implemented, close the loop with evidence |
 | **Bug Fix** (Debug) | After the fix is written, confirm the failure is gone and nothing else broke |
 | **Default** | Any time the human asks “are we actually done?” |
+
+## OpenCode support
+
+Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also under `.claude/skills/`.
+
+**Pairing with OpenCode agents**
+
+| OpenCode agent | How to use this skill |
+|----------------|-----------------------|
+| **Plan** | Safe for listing and interpreting verification results (read-only). |
+| **Build** | Use when fixes are needed; human still types every change. |
+
+Show exact commands the human should run in the terminal. Update known test/verification commands into `AGENTS.md` or project memory so future sessions stay accurate.
+
+## Zed support
+
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-verify` or `@guided-verify`. Prefer updating `AGENTS.md`.
 
 ## Core Rules
 
@@ -58,6 +75,9 @@ Run only what is relevant to the change. Typical order:
 6. **Light security sanity** (secrets, obvious injection, auth gaps) — deeper security stays in guided-review
 
 Framework-aware checks (Django, Laravel, Next.js, etc.) activate automatically when the project type is clear from memory or files.
+
+**Harness passive note**  
+When the change involves an agent, multi-step tool use, or Harness plugins, optionally surface a short verification path using the official DeepSeek Harness run commands or Minimal mode. Keep it under the same contract: AI shows the exact commands and expected results; human runs them and types any fixes.
 
 ## Workflow
 
