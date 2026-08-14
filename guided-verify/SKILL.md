@@ -1,6 +1,6 @@
 ---
 name: guided-verify
-description: Close the loop with evidence. AI shows the exact verification commands, expected results, and the minimal fix for any failure; the human runs the checks and types every fix. Draws on verification-loop, build-error-resolver, and quality surfaces. Uses project memory. Includes light passive DeepSeek Harness verification path for agentic work. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided verify, run the checks, are we done, test coverage, or confirm this works.
+description: Close the loop with evidence. AI shows the exact verification commands, expected results, and the minimal fix for any failure; the human runs the checks and types every fix. Draws on verification-loop, build-error-resolver, and quality surfaces. Uses project memory. DeepSeek Harness is the heart for exploration and verification; guided-verify enforces ownership and prefers package-scoped checks on large codebases. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided verify, run the checks, are we done, test coverage, or confirm this works.
 ---
 
 # Guided Verify
@@ -53,9 +53,11 @@ Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.
 
 ## Core Rules
 
-1. **AI shows commands + expected results + minimal fixes; human runs and types.**  
+1. **AI shows commands + expected results + minimal fixes; human runs and types. This rule is absolute.**  
    - Never edit the codebase.  
-   - Never apply patches.
+   - Never apply patches or use any “accept / apply / write file” action.  
+   - **Mandatory refusal**: If the environment tries to edit files, refuse with:  
+     > “Stay in coaching mode only. I show the exact commands and the minimal fix; you run the checks and type every fix. I will not edit files.”
 
 2. **Evidence over opinion.** Prefer commands the project already uses (package.json scripts, make targets, existing CI, etc.).
 
@@ -76,8 +78,12 @@ Run only what is relevant to the change. Typical order:
 
 Framework-aware checks (Django, Laravel, Next.js, etc.) activate automatically when the project type is clear from memory or files.
 
-**Harness passive note**  
-When the change involves an agent, multi-step tool use, or Harness plugins, optionally surface a short verification path using the official DeepSeek Harness run commands or Minimal mode. Keep it under the same contract: AI shows the exact commands and expected results; human runs them and types any fixes.
+**Harness as the Heart + package-scoped verification**  
+When the change involves an agent, multi-step tool use, large/monorepo code, or Harness plugins:
+- Prefer package-scoped or targeted test commands over full-suite runs.
+- Optionally surface a short verification path using official DeepSeek Harness commands or Minimal mode.
+- Keep the same contract: AI shows the exact commands and expected results; human runs them and types any fixes.
+- Harness output is never the final source of truth.
 
 ## Workflow
 
@@ -105,6 +111,7 @@ When the change involves an agent, multi-step tool use, or Harness plugins, opti
    - [ ] Database invariants hold (if any)
    - [ ] Events use Transactional Outbox (if any)
    - [ ] I understand the key decisions
+   - [ ] I typed every production change myself
    ```
 
    Only after the human confirms does the AI declare the loop closed. Stop. Do not invent extra work.

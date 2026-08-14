@@ -129,12 +129,14 @@ guided-docs → guided-plan → guided-coding → guided-review → guided-verif
 ## What’s new (vNext)
 
 - **OpenCode + Zed skill text** — `guided-coding`, `guided-plan`, `guided-review`, and `guided-verify` now include native OpenCode and Zed support (install paths, agents, project memory)
-- **Passive DeepSeek Harness** — folded into those four skills (no separate skill). Surfaces automatically for agent / multi-step tool work
+- **DeepSeek Harness as the Heart** — folded into those four skills (no separate skill). Harness explores and verifies; the guided skill stays the ownership layer and is never the final source of truth
+- **Large Codebase Mode** — map the relevant slice only and default blast radius to 1–3 files
+- **Hard coaching ownership** — mandatory refusal to edit files; you type every production change
 - **Human Design Support** — AI implements *your* design, not a different architecture
 - **Active Confirmation Gate** — short “why does this matter?” checks on security, auth, and DB rules
 - **Database invariants** — constraints shown as real migrations/DDL, not only app checks
 - **Transactional Outbox** — default for “write DB + publish event” flows
-- **Done checklist** — slice is finished only after behavior, invariants, and understanding are confirmed
+- **Done checklist** — slice is finished only after behavior, invariants, understanding, and typed-by-you changes are confirmed
 
 ---
 

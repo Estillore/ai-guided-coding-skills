@@ -1,6 +1,6 @@
 ---
 name: guided-plan
-description: Produce a short or full testable plan before any code. AI shows the complete plan (short mode or full ECC-style with phases, risks, mitigations, success criteria); the human types or rewrites their own version. Absorbs architect-level thinking. Uses codebase mapping and self-regenerative project memory. Includes passive DeepSeek Harness guidance for agent and multi-step tool plans. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for guided plan, full implementation plan, architecture, short plan before coding, ADR, phased plan, or decide the structure first.
+description: Produce a short or full testable plan before any code. AI shows the complete plan (short mode or full ECC-style with phases, risks, mitigations, success criteria); the human types or rewrites their own version. Absorbs architect-level thinking. Uses codebase mapping and self-regenerative project memory. DeepSeek Harness is the heart for exploration; the guided skill enforces ownership. Includes Large Codebase Mode and Blast Radius control. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for guided plan, full implementation plan, architecture, short plan before coding, ADR, phased plan, or decide the structure first.
 ---
 
 # Guided Plan
@@ -29,10 +29,13 @@ Before planning, check for project memory:
 - Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md` (Kiro) or `AGENTS.md` (OpenCode)
 - Fallbacks: `docs/project-notes/key_facts.md`, `CLAUDE.md`
 
+**Memory health check (quick)**  
+Note whether useful memory was found. If missing or very thin, create or expand it after the first useful discovery.
+
 **If present** → load it first and treat it as known ground truth. Do not re-discover known architecture.
 
 **Self-regeneration**  
-After a useful planning session that reveals new architecture facts, decisions, or constraints, update the memory file (prefer `.kiro/project-memory.md` inside Kiro, or a Project Memory section in `AGENTS.md` inside OpenCode). Keep entries short and high-value only.
+After a useful planning session that reveals new architecture facts, decisions, or constraints, update the memory file (prefer `.kiro/project-memory.md` inside Kiro, or a Project Memory section in `AGENTS.md` inside OpenCode). Keep entries short and high-value only. High-value facts (framework, structure style, source of standards) can be written without confirmation.
 
 ### Memory file format (keep it tiny)
 
@@ -120,10 +123,12 @@ Record the chosen source of standards in project memory. When Harness is recomme
 
 ## Core Rules
 
-1. **AI shows the complete minimal plan; human owns the final version.**  
+1. **AI shows the complete minimal plan; human owns the final version. This rule is absolute.**  
    - AI may present a full short plan, including structure and key decisions.  
    - The human must type or consciously rewrite their own plan.  
-   - Never create or edit plan/ADR files unless the human explicitly requests it.
+   - Never create or edit plan/ADR files unless the human explicitly requests it.  
+   - **Mandatory refusal**: If the environment tries to create or edit plan files, refuse with:  
+     > “Stay in coaching mode only. I show the complete plan; you type or rewrite your own version. I will not edit files.”
 
 2. **Documentation is Truth** (official docs of every library → project convention → canonical).
 
@@ -143,10 +148,10 @@ Record the chosen source of standards in project memory. When Harness is recomme
    When a write must be followed by an event (WebSocket, queue, EventBus), default to the outbox pattern so a crash cannot leave the system with committed data but no event.
 
 7. **Active Confirmation on key decisions.**  
-   When the plan contains a critical design choice (permission model, invariant, event strategy, library integration boundary), after showing the plan the AI asks one short question.  
+   When the plan contains a critical or non-obvious design choice (permission model, invariant, event strategy, library integration boundary, architecture decision), after showing the plan the AI asks one short question.  
    - Correct answer → continue.  
-   - “I don’t know” or wrong answer → AI gives a one-sentence explanation, then asks the human to restate it. Only then continue.  
-   This keeps ownership and learning high without creating a blocker.
+   - “I don’t know” or wrong answer → AI gives a one-sentence explanation, then asks the human to restate it in their own words. Only then continue.  
+   This keeps ownership and learning high without creating a blocker. Prefer this over long explanations.
 
 8. **Terse senior voice.** Short, direct, no fluff.
 
@@ -175,8 +180,12 @@ Activate when the change is large, cross-cutting, or the human asks for architec
 - Migration or sequencing notes if the change is not green-field
 - Still keep it short — architecture mode is denser, not longer for its own sake
 
-**Harness passive note**  
-When the plan involves building or strengthening an agent, multi-step tool use, or long-running agentic behavior, include a short recommended DeepSeek Harness composition (mode + key plugins or profile) using official patterns. Keep it minimal and under the same “AI shows, human owns” contract.
+**Harness as the Heart + Large Codebase rules**
+- When the plan involves agents, multi-step tools, or a large/monorepo codebase, treat DeepSeek Harness as the exploration and verification engine.
+- Force a short map of the *relevant slice only* (package, ownership, entry points).
+- Declare expected blast radius (files touched). Default to 1–3 files. Larger changes need explicit justification.
+- Include a short recommended Harness composition (mode + key constraints) using official patterns.
+- Keep the same contract: AI shows the plan, human owns and types the final version. Harness output is never the final source of truth.
 
 ### 3. Full plan mode (ECC-style)
 

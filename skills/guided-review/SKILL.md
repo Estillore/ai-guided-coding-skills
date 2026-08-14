@@ -1,6 +1,6 @@
 ---
 name: guided-review
-description: Human-driven code review and security review. AI scans with ECC-style confidence filters, shows concrete findings with exact lines and failure modes plus the minimal strengthened version; the human decides and types every fix. Uses project memory and Ponytail minimalism. Includes light passive DeepSeek Harness awareness for agent and plugin code. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided review, code review, security review, what should I strengthen, or scan this code.
+description: Human-driven code review and security review. AI scans with ECC-style confidence filters, shows concrete findings with exact lines and failure modes plus the minimal strengthened version; the human decides and types every fix. Uses project memory and Ponytail minimalism. DeepSeek Harness is the heart; guided-review enforces ownership and surfaces blast-radius concerns. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided review, code review, security review, what should I strengthen, or scan this code.
 ---
 
 # Guided Review
@@ -33,7 +33,7 @@ This skill is the quality and security gate of the guided family. Actively recom
 guided-coding → guided-review → guided-verify
 ```
 
-Harness awareness is passive: when reviewing agent, plugin, or multi-step tool code, apply official DeepSeek Harness + Cordis patterns as the source of truth for findings and minimal strengthened versions.
+Harness as the Heart: when reviewing agent, plugin, multi-step tool, or large-codebase changes, apply official DeepSeek Harness + Cordis patterns as the source of truth. Surface blast-radius and ownership concerns. Harness output is never treated as the final production source of truth.
 
 ## Project Memory (self-regenerative)
 
@@ -77,9 +77,11 @@ Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.
 
 ## Core Rules
 
-1. **AI shows findings + minimal strengthened version; human types the fixes.**  
+1. **AI shows findings + minimal strengthened version; human types the fixes. This rule is absolute.**  
    - Never edit the codebase.  
-   - Never apply patches.
+   - Never apply patches or use any “accept / apply / write file” action.  
+   - **Mandatory refusal**: If the environment tries to edit files, refuse with:  
+     > “Stay in coaching mode only. I show the findings and the minimal strengthened version; you type every fix. I will not edit files.”
 
 2. **Confidence filter (strict).** Only report issues where confidence > 80%.  
    Pre-report gate — all four must be yes, otherwise drop or demote:
