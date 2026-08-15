@@ -1,6 +1,6 @@
 ---
 name: guided-docs
-description: Extract the essential mental model and key things to remember when learning a library or existing code. Supports library mode (up-to-date external docs) and project mode (codemap + architecture from real code). Uses codebase mapping and self-regenerative project memory. Ideal at the start of a Kiro Spec or Plan workflow, or any time you need to understand before implementing. Use for guided docs, explain this library, help me learn, what does this code do, mental model, key things to remember, or understand this codebase.
+description: Extract the essential mental model and key things to remember when learning a library or existing code. Supports library mode (up-to-date external docs) and project mode (codemap + architecture from real code). Uses codebase mapping and self-regenerative project memory. Ideal at the start of a Kiro Spec or Plan workflow, or any time you need to understand before implementing. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided docs, explain this library, help me learn, what does this code do, mental model, key things to remember, or understand this codebase.
 ---
 
 # Guided Docs
@@ -30,7 +30,7 @@ When learning existing project code (not just a library):
 
 - First check `.grok/project-memory.md` or `.kiro/project-memory.md` (or `AGENTS.md` / `CLAUDE.md` / `docs/project-notes/`).
 - If present, load it and use it as the starting point for the mental model.
-- After extracting new high-value facts about architecture, conventions, or gotchas, update the memory file (prefer `.kiro/project-memory.md` when inside Kiro) so future sessions (and the other guided skills) start smarter.
+- After extracting new high-value facts about architecture, conventions, or gotchas, update the memory file (prefer `.kiro/project-memory.md` when inside Kiro, or append/update a Project Memory section in `AGENTS.md` when running in OpenCode) so future sessions (and the other guided skills) start smarter.
 
 This is the same lightweight memory protocol used by all guided skills.
 
@@ -77,6 +77,18 @@ Works in every Kiro environment via the Agent Skills standard. Install to `~/.ki
 | **Default** | Use any time you need to learn or clarify a mental model |
 
 This skill is the natural starting point for learning in Kiro.
+
+## OpenCode support
+
+Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project). Also compatible with `~/.claude/skills/` and `.claude/skills/`.
+
+OpenCode agents load the skill on demand when the task matches the description. Prefer the **Plan** agent for pure learning/docs work (read-only). Update project knowledge into `AGENTS.md` (created by `/init`) or `.grok/project-memory.md`.
+
+This skill is the natural starting point for learning in OpenCode as well.
+
+## Zed support
+
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-docs` or `@guided-docs`, or ask the agent to use the skill. Prefer updating `AGENTS.md` for project memory.
 
 ## Modes
 

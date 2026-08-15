@@ -1,6 +1,6 @@
 ---
 name: guided-tdd
-description: Coach the human through strict Test-Driven Development. AI shows the complete failing test (RED), the minimal implementation (GREEN), and the refactor steps. Human types every line. Use when you want guided TDD, write tests first, Red-Green-Refactor coaching, or enforce 80%+ coverage without the agent editing files.
+description: Coach the human through strict Test-Driven Development. AI shows the complete failing test (RED), the minimal implementation (GREEN), and the refactor steps. Human types every line. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want guided TDD, write tests first, Red-Green-Refactor coaching, or enforce 80%+ coverage without the agent editing files.
 ---
 
 # Guided TDD
@@ -34,7 +34,15 @@ guided-docs → guided-plan → guided-tdd / guided-coding → guided-review →
 
 ## Project Memory
 
-Before any coaching, check for project memory (`.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md`). Treat existing contents as ground truth. Update after meaningful discoveries.
+Before any coaching, check for project memory (`.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md`). Treat existing contents as ground truth. Update after meaningful discoveries (prefer `AGENTS.md` when running in OpenCode).
+
+## OpenCode support
+
+Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Works with Plan and Build; always keep the coaching contract — AI shows RED/GREEN/REFACTOR; human types every line. Never let the agent write test or production files.
+
+## Zed support
+
+Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-tdd` or `@guided-tdd`. Prefer updating `AGENTS.md`.
 
 ## Coaching Process (strict)
 

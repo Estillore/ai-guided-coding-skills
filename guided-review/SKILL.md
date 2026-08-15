@@ -111,6 +111,7 @@ Uses code-reviewer style thinking:
 - Clarity and structure
 - Project convention mismatches
 - Unnecessary complexity (Ponytail violations)
+- **Feature / Module Cohesion** — Flag files that mix unrelated business concerns (e.g. Authentication logic mixed with Inventory logic) as a maintainability issue, especially when the file is large.
 - **Missing database invariants** — domain rules that must always hold (exactly one owner, unique email, non-negative balance, etc.) but are only enforced in application code. Prefer DB constraints.
 - **Missing Transactional Outbox** — when a write is followed by an event publish (WebSocket, queue, EventBus) without an outbox, flag the crash window.
 

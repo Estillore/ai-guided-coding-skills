@@ -1,6 +1,6 @@
 ---
 name: guided-code-reviewer
-description: Coach the human through a rigorous code review. AI shows concrete findings with exact lines, failure modes, and minimal fixes. Human decides and types every change. Use for guided review, code review, security review, what should I strengthen, or after implementation before merge.
+description: Coach the human through a rigorous code review. AI shows concrete findings with exact lines, failure modes, and minimal fixes. Human decides and types every change. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided review, code review, security review, what should I strengthen, or after implementation before merge.
 ---
 
 # Guided Code Reviewer
@@ -32,7 +32,15 @@ guided-docs → guided-plan → guided-coding → guided-review → guided-verif
 
 ## Project Memory
 
-Load project memory first. Prefer project conventions over generic advice.
+Load project memory first (`.grok/project-memory.md`, `.kiro/project-memory.md`, or `AGENTS.md`). Prefer project conventions over generic advice. When running in OpenCode, update findings that become permanent conventions into `AGENTS.md`.
+
+## OpenCode support
+
+Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible locations). Works with Plan (read-only review) and Build (coaching only — human types every fix). Follows the same Agent Skills standard as the rest of the guided family.
+
+## Zed support
+
+Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-code-reviewer` or `@guided-code-reviewer`. Prefer updating `AGENTS.md`.
 
 ## Coaching Process
 

@@ -570,6 +570,34 @@ Treat schema and queries as one concern. The schema exists to make the current q
 - The only differences should be type annotations and the TypeScript quality rules above.
 - Never force TypeScript features into a pure JS file or vice versa.
 
+## Syntax Anchors (optional, high-selectivity)
+
+When the solution uses a common language-level API that developers frequently look up 
+(JavaScript/TypeScript array, string, or object methods; PHP PDO or common query patterns), 
+you MAY add a short Syntax Anchor **after** the main code block the human must type.
+
+### Strict conditions (all must be true)
+- The API belongs to the core language or very common standard library (not framework-specific)
+- The usage is non-trivial enough that a quick reminder has clear value
+- The current language is JavaScript, TypeScript, or PHP
+
+### Format (mandatory)
+- Place the anchor **after** the code the human must type
+- Label it exactly as one of:
+  - `Syntax (JS):`
+  - `Syntax (TS):`
+  - `Syntax (PHP):`
+- Maximum 3–4 lines
+- Show only the signature + 1–2 minimal correct examples
+- No prose, no explanations, no tutorials
+
+### Hard limits
+- Never more than one Syntax Anchor per response
+- Never use it for framework APIs (React, Next.js, Laravel, etc.)
+- Prefer silence when the syntax is already obvious from context
+- Content must remain consistent with the official documentation (Documentation is Truth)
+- The anchor is purely optional and must never replace or expand the main solution
+
 ## Workflow summary (always follow)
 
 1. Adaptability / memory (if needed)

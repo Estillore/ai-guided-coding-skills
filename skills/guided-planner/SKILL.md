@@ -1,6 +1,6 @@
 ---
 name: guided-planner
-description: Coach the human through creating a complete, actionable implementation plan. AI shows the full plan with phases, exact file paths, risks, and testing strategy. Human owns and types the plan (or rewrites it). Use for guided planning, architecture decision, short plan before coding, or when you need a testable plan first.
+description: Coach the human through creating a complete, actionable implementation plan. AI shows the full plan with phases, exact file paths, risks, and testing strategy. Human owns and types the plan (or rewrites it). Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided planning, architecture decision, short plan before coding, or when you need a testable plan first.
 ---
 
 # Guided Planner
@@ -33,7 +33,15 @@ guided-docs → guided-planner → guided-coding → guided-review → guided-ve
 
 ## Project Memory
 
-Load `.grok/project-memory.md` (or `.kiro/project-memory.md` / `AGENTS.md`) first. Do not re-discover what is already recorded. Update after meaningful architectural discoveries.
+Load `.grok/project-memory.md` (or `.kiro/project-memory.md` / `AGENTS.md`) first. Do not re-discover what is already recorded. Update after meaningful architectural discoveries (prefer a Project Memory section in `AGENTS.md` when running in OpenCode).
+
+## OpenCode support
+
+Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Prefer the **Plan** agent. AI shows the full plan; human types or rewrites it. Never create plan files automatically.
+
+## Zed support
+
+Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-planner` or `@guided-planner`. Prefer updating `AGENTS.md`.
 
 ## Coaching Process
 
