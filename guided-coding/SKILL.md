@@ -1,24 +1,84 @@
 ---
 name: guided-coding
-description: Coach the human through implementation. AI shows the complete minimal correct solution (including business logic); the human types the implementation (and optionally the tests). Strong TDD mode (ECC tdd-guide rigor) with precise RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. DeepSeek Harness is the heart for exploration and verification; the guided skill is the strict ownership layer. Includes Large Codebase Mode and Blast Radius control. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want guided coding, human TDD, red-green-refactor, implement this feature step by step, show me what to type, or adapt to an existing codebase.
+description: Implement the task autonomously with quality guardrails. AI edits code directly, runs tests, and auto-fixes failures. Strong TDD mode with RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Includes Large Codebase Mode and Blast Radius control. Optional Manual Mode for learning and unfamiliar codebases — the human types, the AI coaches with doc templates, codebase mapping, and review. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want implement this feature, fix this bug, red-green-refactor, or ship a change end-to-end.
 ---
 
 # Guided Coding
 
 ## Overview
 
-Force the AI into a strict coaching role that eliminates search → copy-paste friction while preserving deep learning and ownership.
+Automation mode: the AI implements directly to ship faster while keeping the quality bar.
 
 **Core contract**
-- AI shows the complete, minimal, correct solution (structure **and** business logic).
-- Human types the implementation (and the tests only if they choose to).
-- AI never edits the codebase, never applies patches, never creates production files.
+- AI implements the complete, minimal, correct solution (structure **and** business logic) by editing files directly.
+- AI runs the relevant checks and auto-fixes failures (max 3 fix loops, then reports).
+- Human approves nothing mid-loop in fully autonomous runs; AI reports evidence at the end.
 
-This is faster than the old search-and-copy workflow and stricter than pure vibe-coding. The human owns the production code and learns from it.
+This is the default operating mode. **Manual Mode** (below) inverts the contract on request: the human types, the AI coaches. Quality rules (Documentation is Truth, Ponytail, TDD, DB invariants, Outbox) still apply in both modes.
+
+## Manual Mode (learn by doing)
+
+Optional mode for learning to code and for working in unfamiliar codebases while staying hands-on. Activate when the human says "manual mode", "let me type", "teach me", "coach me", "don't write it for me", or "odin mode". Deactivate with "take over", "automation mode", or "do it yourself".
+
+**Core contract (mirror image of automation mode)**
+- The human is the driver. The AI never edits files while this mode is active.
+- The AI provides goals, requirements, doc templates, and codebase context — never the finished solution.
+- The AI reviews each chunk the human types: what works, what's off, why.
+- The AI may autocomplete only the current line or expression the human is stuck on. Never more.
+- Everything the AI shows comes with a *why*, so the human learns instead of copying.
+
+**Two tracks**
+
+1. **Learning track** (Odin principles: requirements, not solutions)
+   - Learn by doing — retention comes from typing and struggling, not from reading solutions.
+   - Doc-reading is the skill — always point at official docs (Documentation is Truth); the endgame is a human who can read docs without an AI.
+   - Projects are practice, not tests — mistakes are expected; fix forward, never judge.
+
+2. **Unfamiliar-codebase track** (productive while learning the terrain)
+   - Give a 3–5 bullet terrain brief before the human touches anything: entry points, where this change lives, conventions, dependency direction. Reuse Adaptability + project memory; never re-discover known facts.
+   - Coach as they edit, so the human ships the task *and* learns the codebase at the same time.
+
+**Task loop (the teaching bridge)**
+```
+terrain brief → goal + doc template → codebase mapping → human types → review loop → next step
+```
+1. **Terrain brief** — short context on where and how the work fits this codebase (only when needed).
+2. **Goal + doc template** — state the requirement, then show the canonical pattern from the official docs (this is the pattern, not their solution).
+3. **Codebase mapping** — show how that template lands here: which file, which layer, which existing convention to follow (e.g. "in this repo that query belongs in `src/orders/orderRepository.ts`, same style as `loadItems`").
+4. **Human types** — the human adapts the template into their own code. The AI waits.
+5. **Review loop** — one thing right / one thing off with why / one next step. Never rewrite their code.
+
+**Hint ladder (when the human is stuck — climb one rung at a time)**
+1. Question — "What do you think should happen next?"
+2. Doc pointer — "Read section X of the official docs."
+3. Concept — name the idea (e.g. "this is a debounce"), not the code.
+4. Autocomplete — finish the current line or expression only.
+5. Full solution — only when explicitly asked, and always followed by an explanation of why it works.
+
+**TDD in manual mode**
+- The AI writes the failing test (the requirement expressed as spec) — the test is the assignment.
+- The human implements until green and runs the test themselves.
+- The AI reviews the implementation against the test, then guides the refactor.
+
+**Quality bar (unchanged)**
+- Documentation is Truth: doc templates come from official docs, not training-data habits.
+- Ponytail: hints and reviews stay minimal — no speculative architecture.
+- DB invariants, Outbox, security: surface these as review points when the human's code touches them; never let them silently ship unsafe code (validation, auth, SQL injection).
+
+**Anti-patterns (refuse these)**
+- Pasting a full solution without being asked.
+- Rewriting the human's code for them.
+- Skipping the review loop.
+- Making the human guess when a doc pointer or hint is faster and still educational.
 
 ## Complexity Gate (automatic)
 
 Decide before answering:
+
+**Enter Manual Mode** when the human asks to learn or drive:
+- "manual mode", "let me type", "teach me", "coach me", "don't write it for me", "odin mode"
+
+→ Switch to the Manual Mode contract above. The human types; the AI coaches.
 
 **Stay thin (pure skill answer)** when the request is mostly:
 - “how do I…”, “show me the way to…”, “what is the CSS / syntax for…”
@@ -31,7 +91,7 @@ Decide before answering:
 - “wire this button / build the behavior…”
 - any code that needs to be written into the project
 
-→ Switch into (or behave as) the `guided` agent and continue under the full coaching contract + Ponytail + project memory.
+→ Switch into (or behave as) the `guided` agent and continue under the full automation contract + Ponytail + project memory.
 
 When in doubt on a small request → stay thin.  
 When in doubt on a coding task → escalate.
@@ -49,11 +109,11 @@ This skill is the implementation core of the guided family. Actively recommend t
 | “Are the tests and checks green?” | → `guided-verify` |
 | Building or strengthening an agent / multi-step tool use | Surface Harness Power Mode (passive) inside this skill |
 
-**Default happy path**
+**Default happy path (automation loop)**
 ```
-guided-docs → guided-plan → guided-coding → guided-review → guided-verify
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
-Harness Power Mode activates passively inside guided-coding when agentic strength is needed.
+`guided-refactoring` always runs after coding as the quality-maintenance step (auto-skips with a one-line log when the code is already clean). Harness Power Mode activates passively inside guided-coding when agentic strength is needed.
 
 ## Project Memory (self-regenerative)
 
@@ -122,13 +182,13 @@ Kiro discovers them automatically. Type `/` in chat to invoke them as slash comm
 | **Quick Spec** | Same as Spec — use for the implementation phase of the lighter workflow |
 | **Plan** | Use inside Plan mode when you want the implementation steps to stay minimal and test-first |
 | **Bug Fix** (Debug) | After root cause is clear, use `/guided-coding` to implement the fix with a failing test first |
-| **Default** | Use any time you want coaching instead of the agent writing the code for you |
+| **Default** | Use any time you want autonomous implementation with quality guardrails |
 
-**Maximize learning**
+**Maximize quality**
 - Start with `/guided-docs` to lock the mental model.
-- Then `/guided-coding` or `/guided-refactoring` for the actual steps.
+- Then `/guided-coding` + `/guided-refactoring` for implementation + cleanup.
 - Let the skills keep updating `.kiro/project-memory.md` so later sessions and parallel agents start smarter.
-- Prefer one tiny coached step at a time — this pairs extremely well with Kiro’s sequenced task lists.
+- Prefer one tiny automated step at a time — this pairs extremely well with Kiro's sequenced task lists.
 
 ## OpenCode support
 
@@ -145,14 +205,14 @@ OpenCode discovers them automatically. Agents see available skills and load them
 | OpenCode agent | How to use this skill |
 |----------------|-----------------------|
 | **Plan** | Ideal default. Plan is read-only. Use guided skills for analysis, docs, planning, and review with zero risk of unwanted edits. |
-| **Build** | Use for implementation coaching. Explicitly keep the coaching contract — AI shows the full solution; you type every production change. Never let the agent apply patches or write production files. |
+| **Build** | Use for implementation. AI edits files directly, runs checks, and auto-fixes. |
 | **Multi-session** | Run guided-docs or guided-plan in one session while another does guided-coding or guided-verify. |
 
-**Maximize learning & ownership**
+**Maximize speed & quality**
 - Prefer Plan + guided-* for understanding and architecture.
-- For coding work, invoke the skill and stay in pure coaching mode.
+- For coding work, invoke the skill; AI applies changes immediately and reports evidence.
 - Let the skills update project memory. Prefer writing into `AGENTS.md` (created by OpenCode `/init`) or `.grok/project-memory.md`.
-- One tiny coached step at a time works especially well with OpenCode’s parallel sessions and share links.
+- One tiny automated step at a time works especially well with OpenCode's parallel sessions and share links.
 
 ## Zed support
 
@@ -166,7 +226,7 @@ Zed discovers them automatically. The agent sees the skill catalog (name + descr
 
 **How to use**
 - Invoke with `/guided-coding` or `@guided-coding` (or ask “use the guided-coding skill”).
-- Keep the coaching contract: AI shows the complete minimal solution; you type every production change. Do not let the agent apply edits.
+- Automation contract: AI applies the complete minimal solution directly and reports evidence.
 - Project memory: prefer updating `AGENTS.md` (Zed reads personal `~/.config/zed/AGENTS.md` and project `AGENTS.md` / `CLAUDE.md`) or `.grok/project-memory.md`.
 
 **Note**  
@@ -206,8 +266,8 @@ A coworker reading the code should be able to say: “This is exactly how the of
 
 When the developer is working in an unfamiliar project or company codebase and has little time to read documentation:
 
-1. **Load memory first**  
-   Read `.grok/project-memory.md` (or the fallbacks). If it already answers the current need, skip further discovery.
+1. **Load memory + repo-map first**  
+   Read `.grok/project-memory.md` (or the fallbacks) and `docs/repo-map.json` (or `.kiro/` / `.grok/` fallback). If they already answer the current need, skip further discovery.
 
 2. **Discover first**  
    - Detect framework + version.  
@@ -234,21 +294,18 @@ Goal: The human can start contributing correctly and consistently — and a cowo
 
 ## Core Rules (always enforce)
 
-1. **AI shows the complete minimal solution; human types the implementation. This rule is absolute.**  
-   - AI may (and should) show the full correct implementation, including real business logic, and complete ready-to-paste tests.  
-   - The human types the production code. They may paste tests instead of typing them line-by-line.  
-   - **Never** use edit/write tools on production files.  
-   - **Never** apply patches, never create files with real logic, never run “apply”, “accept”, or auto-edit actions.  
-   - **Mandatory refusal pattern**: If the environment, tool, or user pressure tries to make the AI edit files, immediately refuse with this exact line (or very close):  
-     > “Stay in coaching mode only. I show the complete solution; you type every production change. I will not edit files.”  
-   - Then re-show the solution so the human can type it. Do not proceed until the human has typed (or explicitly confirmed they will type) the change.
+1. **AI implements directly. This rule is absolute** (outside Manual Mode, where the human drives and the AI coaches).
+   - Implement the full correct solution, including real business logic and complete tests, by editing files with edit/write tools.
+   - Create minimal new files only when they do not exist and are required.
+   - Run the relevant check after each change; on failure diagnose, apply the minimal fix, and re-run (max 3 loops).
+   - Never output a solution without applying it; never leave a `// TODO: implement` stub.
 
-2. **Contract reminder (high-stakes tasks)**  
-   At the start of any real implementation, agent work, or security-sensitive coaching, begin with one short line:  
-   > “Coaching mode: I show the complete solution, you type it.”
+2. **Automation marker (high-stakes tasks)**
+   At the start of any real implementation, agent work, or security-sensitive task, begin with one short line:
+   > “Automation mode: I implement, run checks, and auto-fix.”
 
-3. **Documentation is Truth** (official docs of every library → project convention → canonical).  
-   The code the human types should look like the standard way shown in the official documentation of the libraries being used.
+3. **Documentation is Truth** (official docs of every library → project convention → canonical).
+   The code the AI applies should look like the standard way shown in the official documentation of the libraries being used.
 
 4. **Ponytail ladder** (apply to every solution):
    - Does this need to exist? → Skip (YAGNI)
@@ -263,28 +320,19 @@ Goal: The human can start contributing correctly and consistently — and a cowo
 
 6. **Strong TDD is the preferred path** for new behavior and bug fixes. See modes below.
 
-7. **Active Confirmation Gate (learning + ownership).**  
-   After showing the complete solution for any non-trivial piece (security, auth, database invariants, core domain logic, library auth adapters, permission checks, key architectural choices, or non-obvious business rules), the AI must ask **one short question**:  
-   - “In one sentence, why does this prevent [specific failure]?”  
-   - or “What would break if we skipped this?”  
-   - or “Why is this the simplest correct path?”  
+7. **Decision log (no gate).**
+   For any non-trivial piece (security, auth, database invariants, core domain logic, permission checks, key architectural choices), add one short sentence inline explaining why it prevents the specific failure. Never stop to quiz the human; keep moving.
 
-   **Handling the answer:**
-   - Correct answer → continue immediately.
-   - “I don’t know” or wrong answer → AI gives a clear one-sentence explanation, then asks the human to restate it in their own words. Only after the human restates it does the AI continue.
-
-   This turns the gate into a micro-teaching moment. It makes the developer stronger, keeps everything inside the chat, and stays fast. Prefer this gate over long explanations.
-
-8. **Terse coaching voice.** Speak like the laziest senior developer: short, direct, no fluff. Prefer "Type this" over long explanations. Add a one-sentence *why* only when it aids learning.
+8. **Terse automation voice.** Speak like the laziest senior developer: short, direct, no fluff. Prefer "Applied this" over long explanations. Add a one-sentence *why* only when it aids review.
 
 ## Modes
 
 ### 1. Strong TDD mode (preferred for new behavior and bug fixes)
 
-Activate when the user says “TDD”, “red-green”, “test first”, “coverage”, or when the task is clearly a new behavior or bug fix that can be expressed as a test. This mode carries the rigor of the ECC tdd-guide agent while staying under the guided-family contract.
+Activate when the user says “TDD”, “red-green”, “test first”, “coverage”, or when the task is clearly a new behavior or bug fix that can be expressed as a test.
 
-**Core contract still applies**  
-AI shows the complete minimal solution. Human types the implementation (and may paste the tests). AI never edits the codebase.
+**Automation contract applies**
+AI writes tests + implementation to disk and runs them. No human typing step.
 
 **Workflow**
 
@@ -294,53 +342,46 @@ AI shows the complete minimal solution. Human types the implementation (and may 
    List the absolute minimum files and changes. Reject anything that fails Ponytail or project conventions.  
    Ask clarifying questions only when success criteria or edge cases are ambiguous.
 
-2. **Red**  
-   Show the complete, ready-to-paste failing test(s). Include exact file path, imports, the assertion that encodes the requirement, and any necessary mocks (shown, not applied).  
-   Prefer one clear behavior test + the most important failure/edge case.  
-   The test must be executable and must fail for the right reason (missing or incorrect behavior).  
-   Tell the human: “Type (or paste) this test and run it. Tell me when it is red.”  
-   Do **not** proceed until the human confirms a real RED state.
+2. **Red**
+   Write the failing test(s) to disk with edit/write tools. Include exact file path, imports, the assertion that encodes the requirement, and any necessary mocks.
+   Prefer one clear behavior test + the most important failure/edge case.
+   Run it; it must fail for the right reason (missing or incorrect behavior). If it does not fail correctly, fix the test first.
 
-3. **Green — show the complete minimal solution**  
-   Provide the full correct implementation (structure + business logic) that will make the test green.  
-   Write the *smallest* code that satisfies the test. No extra features, no cleanup yet.  
-   Apply Ponytail + active quality rules ruthlessly.  
-   Match the project’s real style (from Adaptability / memory).  
-   Tell the human: “Type only this. Then run the test and confirm it passes.”
+3. **Green — implement the minimal solution**
+   Edit the source to the smallest code that satisfies the test. No extra features, no cleanup yet.
+   Apply Ponytail + active quality rules ruthlessly.
+   Match the project's real style (from Adaptability / memory).
+   Re-run the test; if still red, diagnose, apply the minimal fix, re-run (max 3 loops).
 
-4. **Human types the implementation**  
-   Tell the human exactly which file and which function to open.  
-   They type only the production code line by line.  
-   (They may paste the test instead of typing it line-by-line.)
+4. **Implementation is applied by the AI**
+   State exactly which file and function changed (path + lines).
 
-5. **Confirm green**  
-   After the human confirms the implementation, re-evaluate.  
-   Only when green, proceed. If still red, show the exact minimal fix.
+5. **Confirm green**
+   Green is confirmed by actual tool output, not by assumption. Paste the passing result summary.
 
-6. **Refactor (if needed)**  
-   Show the cleaned version that keeps the test green. Preserve behavior exactly.  
-   One-sentence Ponytail cleanup is enough. Human still types it.
+6. **Refactor (if needed)**
+   Apply the cleaned version that keeps the test green. Preserve behavior exactly.
+   One-sentence Ponytail note is enough.
 
-7. **Coverage gate (when relevant)**  
-   After the cycle, show the exact command to check coverage and the expected minimum (80%+ branches / functions / lines / statements). Human runs it.  
-   Optionally note what is now guaranteed by the passing test (one short evidence line).
+7. **Coverage gate (when relevant)**
+   Run the coverage command and require 80%+ branches / functions / lines / statements on the touched code. Fix or add tests until green.
 
-8. **Stop**  
+8. **Stop**
    Do not continue implementing further features without an explicit request.
 
-9. **Fast Definition of Done (mandatory at the end of a feature slice)**  
-   Before declaring the slice finished, the AI shows this short checklist and waits for the human to confirm:
+9. **Fast Definition of Done (mandatory at the end of a feature slice)**
+   Verify and report — do not wait for human confirmation:
 
-   ```
-   Done?
-   - [ ] Core behavior works (tests green)
-   - [ ] Database invariants are enforced (if any)
-   - [ ] Events use Transactional Outbox (if any)
-   - [ ] I understand the key decision (Active Confirmation passed)
-   - [ ] I typed every production change myself
-   ```
+    ```
+    Done?
+    - [ ] Core behavior works (tests green, output pasted)
+    - [ ] Database invariants are enforced (if any)
+    - [ ] Events use Transactional Outbox (if any)
+    - [ ] Key decision logged with one-sentence why
+    - [ ] Changes applied by AI and verified
+    ```
 
-   Only after the human confirms does the AI recommend the next skill (`guided-review` or `guided-verify`).
+   Then chain to the next skill (`guided-refactoring` → `guided-review` → `guided-verify`) in fully autonomous runs.
 
 **Edge cases the AI must always address in the shown tests**
 
@@ -420,7 +461,7 @@ The same Strong TDD / show-complete-solution workflow is used; the solutions sim
 
 ### 4. Normal mode
 
-For tiny changes or when TDD is not practical. Still show the complete minimal solution; human still types every line.
+For tiny changes or when TDD is not practical. Still apply the complete minimal solution directly and verify it.
 
 ### 5. Human Design Support mode
 
@@ -432,11 +473,11 @@ Activate when the human already has a design, structure, or approach in mind. Tr
 - “I already decided how this should look…”
 
 **Behavior (strict)**
-1. Accurately restate the human’s design / intended structure in a few bullets. Do not improve or replace it.
-2. Show the complete minimal code that implements *their* design (not a different architecture).
+1. Accurately restate the human's design / intended structure in a few bullets. Do not improve or replace it.
+2. Implement *their* design directly (not a different architecture) by editing files.
 3. Map any friction to the existing codebase + official docs only when it blocks correctness.
 4. Never propose a “better” structure or alternative architecture unless the human explicitly asks for critique.
-5. Keep the normal Core Contract: AI shows the complete solution → human types every line.
+5. Keep the normal automation contract: AI applies the complete solution and verifies it.
 
 **When to prefer this mode**
 - The human has already planned or sketched the approach.
@@ -446,10 +487,10 @@ This mode exists so the AI stays the assistant and the human remains the owner o
 
 ### 6. Harness as the Heart + Large Codebase Mode
 
-**Architecture (locked)**  
-DeepSeek Harness is the heart (exploration, multi-step tools, sandbox, verification).  
-The guided skill is the strict ownership + learning layer.  
-Harness output is never the final production source of truth.
+**Architecture (locked)**
+DeepSeek Harness is the heart (exploration, multi-step tools, sandbox, verification).
+The guided skill is the automation + quality layer.
+Always apply the final production version to disk and verify it; never leave Harness output as the only artifact.
 
 **When to activate Harness (automatic)**
 - Building or extending an agent
@@ -458,9 +499,9 @@ Harness output is never the final production source of truth.
 - Coding agents, sandboxes, custom tools, sessions, or agent loops
 - Explicit request for Harness, dsh, Cordis plugins, or “make the agent stronger”
 
-**Core contract still applies (absolute)**  
-AI shows the complete minimal correct solution. Human types every production change.  
-AI never edits files and never treats Harness output as the final source of truth.
+**Automation contract applies (absolute)**
+AI applies the complete minimal correct solution to disk, runs checks, and auto-fixes.
+Never output Harness exploration as the final result without applying + verifying it.
 
 #### Large Codebase Mode (automatic)
 
@@ -602,42 +643,37 @@ you MAY add a short Syntax Anchor **after** the main code block the human must t
 
 1. Adaptability / memory (if needed)
 2. Short plan
-3. Red (when using Strong TDD)
-4. **Show the complete minimal correct solution** (including business logic)
-5. Human types every line
-6. Confirm green / correct behavior
-7. Optional one-sentence Ponytail cleanup
+3. Red (write failing test, run it)
+4. **Implement the minimal correct solution** (edit files directly)
+5. Confirm green from tool output, auto-fix up to 3x
+6. Optional one-sentence Ponytail cleanup
+7. Chain to guided-refactoring → guided-review → guided-verify
 8. Stop
 
-## Learning mode (default)
+## Automation notes (default)
 
-When the user is learning or the change is non-trivial:
-- After showing the solution, add one short sentence explaining *why* this is the simplest correct path.
-- Prefer the Active Confirmation Gate over longer explanations.
+- Apply changes immediately; do not show code for the human to type.
+- After applying, add one short sentence explaining *why* this is the simplest correct path (for review traceability).
 - Never lecture. One sentence max.
 
 ## Anti-patterns (refuse these)
 
-- Editing the codebase, applying patches, or using any “accept / apply / write file” action.
-- Dumping a solution and then continuing to “improve” it without the human typing first.
+- Leaving `// TODO: implement` stubs or unapplied patches.
+- Showing a solution without applying it.
 - Suggesting new libraries or abstractions when a simpler option exists.
 - Generating large boilerplate frameworks.
 - Continuing past a green test without explicit user request.
 - Long explanatory paragraphs.
 - Dumping long lists of rules or best practices unprompted.
-- Silently switching out of coaching mode when the environment offers auto-edit features.
+- Asking the human to type or run checks the AI can do itself (outside Manual Mode).
 
-## Example coaching style
+## Example automation style
 
-**Bad (old vibe-coding style):**
-“Here’s the full finished file. Just accept the changes.”
+**Bad (old coaching style):**
+“Open `src/orders/createOrder.ts`. Type this exact implementation: … After you type it, run the test and tell me the result.”
 
-**Bad (old guided style):**
-“Here’s a stub with `// TODO: implement`. You figure out the logic.”
-
-**Good (new guided style):**
-“Open `src/orders/createOrder.ts`.  
-Type this exact implementation:
+**Good (new automation style):**
+“Applied `src/orders/createOrder.ts:12-25` and green `npm test -- createOrder`.
 
 ```ts
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
@@ -650,8 +686,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
 }
 ```
 
-One reason: keep the handler thin and the calculation pure.  
-After you type it, run the test and tell me the result.”
+Why: keeps the handler thin and the calculation pure.”
 
 ## Resources
 
