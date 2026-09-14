@@ -1,18 +1,18 @@
 ---
 name: guided-tdd
-description: Coach the human through strict Test-Driven Development. AI shows the complete failing test (RED), the minimal implementation (GREEN), and the refactor steps. Human types every line. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want guided TDD, write tests first, Red-Green-Refactor coaching, or enforce 80%+ coverage without the agent editing files.
+description: Autonomous strict Test-Driven Development. AI writes the failing test (RED), implements the minimal fix (GREEN), refactors, runs coverage, and auto-fixes. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want TDD, write tests first, Red-Green-Refactor, or enforce 80%+ coverage.
 ---
 
 # Guided TDD
 
 ## Overview
 
-Force the AI into a strict coaching role for Test-Driven Development. The AI shows the complete, minimal, correct test and implementation; the human types every change. This eliminates search-copy friction while preserving ownership and learning.
+Force the AI into autonomous Test-Driven Development. The AI writes the complete, minimal, correct test and implementation to disk, runs them, and auto-fixes.
 
 **Core contract**
-- AI shows the complete failing test, the minimal passing implementation, and any refactor.
-- Human types the code (and the tests).
-- AI never edits the codebase, never applies patches, never creates production files.
+- AI writes the complete failing test, the minimal passing implementation, and any refactor directly.
+- AI runs tests + coverage and fixes failures (max 3 loops).
+- AI reports evidence at the end.
 
 This is the TDD specialist companion to `guided-coding`. Prefer this when the task is explicitly test-first or coverage-focused.
 
@@ -27,9 +27,9 @@ This is the TDD specialist companion to `guided-coding`. Prefer this when the ta
 | Implementation done | → `guided-review` or `guided-code-reviewer` |
 | Check tests & coverage | → `guided-verify` |
 
-**Default happy path**
+**Default happy path (automation loop)**
 ```
-guided-docs → guided-plan → guided-tdd / guided-coding → guided-review → guided-verify
+guided-docs → guided-plan → guided-tdd / guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
 ## Project Memory
@@ -38,43 +38,41 @@ Before any coaching, check for project memory (`.grok/project-memory.md` or `.ki
 
 ## OpenCode support
 
-Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Works with Plan and Build; always keep the coaching contract — AI shows RED/GREEN/REFACTOR; human types every line. Never let the agent write test or production files.
+Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Works with Plan and Build; automation contract — AI writes + runs RED/GREEN/REFACTOR and auto-fixes.
 
 ## Zed support
 
 Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-tdd` or `@guided-tdd`. Prefer updating `AGENTS.md`.
 
-## Coaching Process (strict)
+## Automation Process (strict)
 
 ### 1. Clarify the behavior
 - Restate the expected behavior in one sentence.
 - Ask only if success criteria or edge cases are ambiguous.
 
-### 2. Show the RED test (complete & minimal)
-Show the full test file or test case that fails for the right reason. Include:
+### 2. Write the RED test (complete & minimal)
+Write the full test file or test case to disk that fails for the right reason. Include:
 - Exact file path
 - Imports
 - The assertion that encodes the requirement
-- Any necessary mocks (shown, not applied)
+- Any necessary mocks (applied, not just shown)
 
-Tell the human: "Type this test. Then run it and confirm it fails."
+Run it; it must fail for the right reason. Fix the test first if it does not.
 
 ### 3. Confirm RED
-Human runs the test. Only proceed when they report the expected failure.
+RED is confirmed by actual tool output, not by human report.
 
-### 4. Show the GREEN implementation (complete & minimal)
-Show the smallest change that makes the test pass. No extra features, no cleanup yet.
-
-Tell the human: "Type only this. Then run the test and confirm it passes."
+### 4. Apply the GREEN implementation (complete & minimal)
+Apply the smallest change that makes the test pass. No extra features, no cleanup yet. Re-run; auto-fix up to 3x.
 
 ### 5. Confirm GREEN
-Human runs the test. Only proceed when green.
+GREEN is confirmed by actual tool output. Only proceed when green.
 
-### 6. Show the REFACTOR (if needed)
-Show the cleaned version that keeps the test green. Preserve behavior exactly.
+### 6. Apply the REFACTOR (if needed)
+Apply the cleaned version that keeps the test green. Preserve behavior exactly.
 
 ### 7. Coverage gate
-After the cycle, show the exact command to check coverage and the expected minimum (80%+ branches/functions/lines/statements). Human runs it.
+Run the coverage command and require 80%+ branches/functions/lines/statements on the touched code. Add tests until green.
 
 ## Edge cases the AI must always address in the shown tests
 

@@ -1,0 +1,62 @@
+{
+  "goal": "Allow a user to cancel a pending order. Status becomes cancelled and inventory is released.",
+  "non_goals": ["Refunds", "Partial cancellation", "Admin override"],
+  "blast_radius": {
+    "files": [
+      "src/orders/cancelOrder.ts",
+      "src/orders/orderRepository.ts",
+      "src/orders/cancelOrder.test.ts"
+    ]
+  },
+  "steps": [
+    {
+      "file": "src/orders/cancelOrder.test.ts",
+      "action": "Add failing tests: pending→cancelled + inventory restored; shipped→clear error",
+      "why": "RED first proves the behavior gap"
+    },
+    {
+      "file": "src/orders/cancelOrder.ts",
+      "action": "Add cancel use-case with pending-only guard",
+      "why": "Keep handler thin, rule explicit"
+    },
+    {
+      "file": "src/orders/orderRepository.ts",
+      "action": "Status update + inventory release in one transaction",
+      "why": "Atomicity: never cancel without releasing stock"
+    }
+  ],
+  "key_decisions": [
+    {
+      "decision": "Repository owns the transaction, use-case stays pure",
+      "why": "Matches existing order service style"
+    }
+  ],
+  "test_strategy": {
+    "tests": ["cancelOrder.test.ts"],
+    "coverage_min": 80
+  },
+  "invariants": [
+    {
+      "rule": "Only pending orders may be cancelled",
+      "enforcement": "CHECK constraint on status transition + app guard"
+    }
+  ],
+  "events": [
+    {
+      "name": "order.cancelled",
+      "outbox": true
+    }
+  ],
+  "done_criteria": [
+    "Tests green, 80%+ coverage on touched code",
+    "No new dependencies",
+    "Matches existing order service style"
+  ],
+  "accuracy": {
+    "mutation_min_backend": 70,
+    "mutation_scope": ["src/orders/cancelOrder.ts"],
+    "contract_tests": ["cancel order response shape"],
+    "arch_rules": ["controllers never touch repositories"]
+  },
+  "source_of_standards": "project convention"
+}

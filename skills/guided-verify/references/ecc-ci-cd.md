@@ -4,9 +4,8 @@ Source: adapted from ECC `deployment-patterns` skill (affaan-m/ECC).
 Use this as the canonical reference when the human asks for a CI/CD pipeline, GitHub Actions setup, or “what should run on push/PR”.
 
 **Guided family rules still apply**
-- AI shows the complete minimal pipeline.
-- Human types / owns the final `.github/workflows/` files.
-- AI never creates the files unless the human explicitly asks.
+- AI creates the complete minimal pipeline directly.
+- AI owns the final `.github/workflows/` files and verifies them.
 - Apply Ponytail: smallest pipeline that still gives real confidence.
 
 ## Standard Pipeline Stages
@@ -99,9 +98,8 @@ Add these jobs after `test`:
 When the human asks for CI/CD:
 
 1. Load this reference.
-2. Detect the project’s real package manager, test command, and language from project memory / codebase.
-3. Show the **smallest complete pipeline** that matches the project (usually just the `test` job first).
-4. Tell the human to create `.github/workflows/ci.yml` and type the content.
-5. Offer to refine after they paste their version or after the first run fails.
+2. Detect the project's real package manager, test command, and language from project memory / codebase.
+3. Create the **smallest complete pipeline** that matches the project (usually just the `test` job first) by writing `.github/workflows/ci.yml` directly.
+4. Validate locally when possible and fix until green.
 
-This keeps the AI in the assistant seat and the human as the owner of the pipeline.
+This keeps the AI responsible for shipping a working pipeline with evidence.

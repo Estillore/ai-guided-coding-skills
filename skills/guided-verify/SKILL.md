@@ -1,6 +1,6 @@
 ---
 name: guided-verify
-description: Close the loop with evidence. AI shows the exact verification commands, expected results, and the minimal fix for any failure; the human runs the checks and types every fix. Draws on verification-loop, build-error-resolver, and quality surfaces. Uses project memory. DeepSeek Harness is the heart for exploration and verification; guided-verify enforces ownership and prefers package-scoped checks on large codebases. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided verify, run the checks, are we done, test coverage, or confirm this works.
+description: Close the loop with evidence, autonomously. AI runs the verification commands, auto-applies minimal fixes, re-runs until green, and reports evidence. Uses project memory. Prefers package-scoped checks on large codebases. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for verify, run the checks, are we done, test coverage, or confirm this works.
 ---
 
 # Guided Verify
@@ -10,15 +10,15 @@ description: Close the loop with evidence. AI shows the exact verification comma
 Turn “it looks done” into “we have evidence it works.”
 
 **Core contract**
-- AI shows the exact commands to run, the expected green results, and the complete minimal fix for any failure (including business logic if needed).
-- Human runs the commands and types every fix.
-- AI never edits the codebase.
+- AI runs the exact verification commands, auto-applies the minimal fix for any failure, and re-runs until green (max 3 fix loops).
+- AI edits the codebase directly when fixes are needed.
+- AI reports commands run + results as evidence at the end.
 
 This is the final gate of the guided family.
 
 ## Project Memory (self-regenerative)
 
-Load `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` first. Use known test commands, scripts, and conventions. Update memory only when a new high-value verification fact appears (e.g. the real way this project runs e2e). Prefer writing into `AGENTS.md` when running in OpenCode.
+Load `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` first, plus `docs/repo-map.json` when present. Prefer its `test_commands` over guessing. Use known test commands, scripts, and conventions. Update memory only when a new high-value verification fact appears (e.g. the real way this project runs e2e). Prefer writing into `AGENTS.md` when running in OpenCode.
 
 ## Kiro IDE support
 
@@ -43,7 +43,7 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 | OpenCode agent | How to use this skill |
 |----------------|-----------------------|
 | **Plan** | Safe for listing and interpreting verification results (read-only). |
-| **Build** | Use when fixes are needed; human still types every change. |
+| **Build** | Use when fixes are needed; AI applies them and re-runs. |
 
 Show exact commands the human should run in the terminal. Update known test/verification commands into `AGENTS.md` or project memory so future sessions stay accurate.
 
@@ -53,11 +53,10 @@ Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.
 
 ## Core Rules
 
-1. **AI shows commands + expected results + minimal fixes; human runs and types. This rule is absolute.**  
-   - Never edit the codebase.  
-   - Never apply patches or use any “accept / apply / write file” action.  
-   - **Mandatory refusal**: If the environment tries to edit files, refuse with:  
-     > “Stay in coaching mode only. I show the exact commands and the minimal fix; you run the checks and type every fix. I will not edit files.”
+1. **AI runs checks + auto-fixes; reports evidence. This rule is absolute.**
+   - Edit the codebase directly when a fix is needed.
+   - Run commands with the execution tool; never ask the human to run them.
+   - On failure: diagnose, apply the minimal fix, re-run only the failed check (max 3 loops, then report blocker).
 
 2. **Evidence over opinion.** Prefer commands the project already uses (package.json scripts, make targets, existing CI, etc.).
 
@@ -75,99 +74,119 @@ Run only what is relevant to the change. Typical order:
 4. **Build** (if relevant)
 5. **Critical path / e2e** (only when the change is user-facing or cross-cutting)
 6. **Light security sanity** (secrets, obvious injection, auth gaps) — deeper security stays in guided-review
+7. **React audit (React projects only)** — `python ~/.guided/scripts/guided_run.py react-doctor --repo <dir> --scope changed --blocking error` (pinned binary auto-downloads on first use; SKIP when not React/offline → note in one line and continue). FAIL routes back to `guided-coding` like any red check; stale-green rule applies.
+8. **Growth watch (infra touched)** — when the change touched infra files (Dockerfile, compose, wrangler, migrations, queue/cron config), run `python ~/.guided/scripts/guided_run.py growth --repo <dir>`. If it recommends an audit, append 3 lines (top gaps + recommendation) and point to `guided-infra`. Cooldown: automatic runs skip when `growth.last_audit` in the repo-map is under 14 days old (explicit asks always run).
+9. **PHP audit (PHP projects only)** — `python ~/.guided/scripts/guided_run.py php-audit --repo <dir> --scope changed --blocking error` (runs only auditors the project already has; never installs; SKIP when not PHP / no php / no tools → note in one line and continue). FAIL routes back to `guided-coding` like any red check; stale-green rule applies.
 
 Framework-aware checks (Django, Laravel, Next.js, etc.) activate automatically when the project type is clear from memory or files.
 
-**Harness as the Heart + package-scoped verification**  
+## Accuracy gates (prove the tests themselves)
+
+Green suites can lie. Run the gate that matches the change; thresholds come from the Plan IR `accuracy` block (defaults below):
+
+1. **Mutation gate (test-the-tests)** — scoped to touched business logic only, never the whole repo.
+   - PHP: `vendor/bin/infection --filter=<touched files> --min-msi=<n> --threads=4` (default min 70 MSI on covered code).
+   - React/TS: `npx stryker run` with `coverageAnalysis: perTest`, `mutate` limited to touched files, `break` threshold from plan (default 50, raise toward 75).
+   - Each survived mutant → write the missing test, re-run. Use incremental mode in CI.
+2. **Contract gate (the seam)** — when request/response shape changed or a consumer reads new fields.
+   - Full: Pact consumer test (React, `PactV4` + `MatchersV3`) + provider `Verifier` replay against real PHP; `can-i-deploy` before release. Nullable fields need explicit `nullValue()` matchers.
+   - Light (same repo, one consumer): backend asserts exact JSON shape + frontend fixture mirrors it; one contract test compares fixture vs live response.
+3. **Architecture gate (shape, not behavior)** — when layers, dependencies, or conventions are touched.
+   - PHP: `vendor/bin/deptrac analyse` (controllers→services→repositories, domain framework-free, no cycles). Baseline legacy debt with `skip_violations`, never new ones.
+   - PHP alt: Pest `arch()` tests. React/TS: `dependency-cruiser` boundaries.
+4. **Flake rule** — a test that passes 9/10 proves nothing. Fresh DB per test (transactions), seeded data, frozen time, no real network, no order dependence. Retry once to detect flakes; a flaky test FAILS the gate until fixed or quarantined with a tracked follow-up.
+
+**Harness as the Heart + package-scoped verification**
 When the change involves an agent, multi-step tool use, large/monorepo code, or Harness plugins:
 - Prefer package-scoped or targeted test commands over full-suite runs.
-- Optionally surface a short verification path using official DeepSeek Harness commands or Minimal mode.
-- Keep the same contract: AI shows the exact commands and expected results; human runs them and types any fixes.
-- Harness output is never the final source of truth.
+- Optionally use official DeepSeek Harness commands or Minimal mode for verification.
+- Same automation contract: AI runs the commands and applies fixes directly.
 
 ## Workflow
 
-1. **Load context**  
-   Memory + what just changed (human describes or pastes).
+1. **Load context + deterministic gates**
+   Memory + what just changed (diff, file list, or recent edits).
+   - If a Plan IR exists: run `python ~/.guided/scripts/guided_run.py validate-plan <plan.json> --changed <touched files>` (or `verify --plan` to run the full harness). A FAIL (or blast-radius drift) blocks the green declaration — route back to `guided-coding` first.
+   - Confirm touched files ⊆ planned blast radius; flag drift as a finding.
 
-2. **Show the verification plan**  
-   Exact commands the human should run, in order, with the expected green outcome for each.
+2. **Run the verification plan (prefer the harness)**
+   `python ~/.guided/scripts/guided_run.py verify --repo <dir> [--plan <plan.json>]` runs the ladder + planned accuracy gates and writes a JSON receipt (exit 0 = PASS).
+   Run the relevant commands in order, capturing output for each (harness does this; manual runs must match it).
+   - React projects: run the react-doctor gate (checklist item 7) alongside the ladder — its FAIL routes back to guided-coding.
+   - PHP projects: run the php-audit gate (checklist item 9) alongside the ladder — its FAIL routes back to guided-coding.
+   - Infra touched: run the growth watch (checklist item 8) and include its recommendation in the close report.
 
-3. **Human runs them**  
-   Human pastes the output (or says “all green”).
-
-4. **On failure**  
-   - Diagnose the failure (build-error-resolver style).  
-   - Show the complete minimal fix (including any needed business logic).  
-   - Human types the fix.  
+3. **On failure (error-count rule)**
+   - Diagnose the failure (build-error-resolver style).
+   - Apply the complete minimal fix directly.
    - Re-run only the failed check.
+   - Track the error count: keep fixing while it reaches a new minimum (max 3 loops). If two consecutive rounds do not reduce it, stop and report the blocker truthfully — never disguise it.
+   - Stale-green rule: any edit invalidates all prior green outputs. Never report an old PASS as current evidence; re-run after every fix. A non-zero exit is never success.
 
-5. **Close**  
-   When the relevant checks are green, show the short Done checklist and wait for human confirmation:
+4. **Close**
+   When the relevant checks are green, report the short Done checklist with evidence:
 
-   ```
-   Done?
-   - [ ] Relevant tests / checks are green
-   - [ ] Database invariants hold (if any)
-   - [ ] Events use Transactional Outbox (if any)
-   - [ ] I understand the key decisions
-   - [ ] I typed every production change myself
-   ```
+    ```
+    Done?
+    - [x] Relevant tests / checks are green (outputs below)
+    - [x] Database invariants hold (if any)
+    - [x] Events use Transactional Outbox (if any)
+    - [x] Changes applied + verified by AI
+    ```
 
-   Only after the human confirms does the AI declare the loop closed. Stop. Do not invent extra work.
+   Then stop. Do not invent extra work.
 
 ## CI/CD pipelines (when asked)
 
 When the human asks for a CI/CD pipeline, GitHub Actions, or “what should run on push/PR”:
 
 1. Load the reference: `references/ecc-ci-cd.md`
-2. Detect the project’s real package manager, test scripts, and language from project memory / codebase.
-3. Show the **smallest complete pipeline** that matches the project (usually the test job first).
-4. Human creates `.github/workflows/ci.yml` and types the content.
-5. Offer to refine after they paste their version or after the first run fails.
+2. Detect the project's real package manager, test scripts, and language from project memory / codebase.
+3. Create the **smallest complete pipeline** that matches the project (usually the test job first) by writing `.github/workflows/ci.yml` directly.
+4. Run available local validation (or `actionlint` if present) and fix until green.
 
-Never create the workflow file yourself unless the human explicitly asks.
+## Output format (three separated claims — never conflate)
 
-## Output format
+Pin the revision first: `git rev-parse --short HEAD` (or state `uncommitted` when nothing is committed).
 
 ```markdown
-## Verify
+## Verify — <short-sha or uncommitted>
 
-Run these in order:
+1. Checks (tool output only):
+   - `npm test -- createOrder` → PASS (12 passed)
+   - `npx tsc --noEmit` → clean
+   - `npm run lint` → clean
+   - `react-doctor (changed)` → clean / N errors (React only)
+   - `php-audit (changed)` → clean / N errors + M warnings (PHP only)
 
-1. `npm test -- createOrder`
-   Expected: all green, including the new cancel cases.
+2. Review (static findings): none / [fixed CRITICAL file:line …]
 
-2. `npx tsc --noEmit`
-   Expected: clean.
+3. Manual (needs a human): <only if perceptual/manual review is required, else `n/a`>
 
-3. `npm run lint`
-   Expected: clean (or only pre-existing warnings).
-
-Paste the output (or say “green”) after each, or after all of them.
+Done?
+- [x] Relevant tests / checks are green (outputs above, current revision)
+- [x] Database invariants hold (if any)
+- [x] Events use Transactional Outbox (if any)
+- [x] Changes applied + verified by AI
 ```
 
 On failure:
 
 ```markdown
-## Failure
+## Failure → Fixed
 
 Command: `npm test -- createOrder`
 Problem: …
-
-Type this minimal fix in `src/orders/cancelOrder.ts`:
-
+Fix applied in `src/orders/cancelOrder.ts:34-41`:
 ```ts
-// exact code
+// exact code applied
 ```
-
-Then re-run the same command.
+Re-ran: PASS.
 ```
 
 ## Anti-patterns
 
-- Editing the codebase.
-- Running or inventing checks the project does not use.
+- Asking the human to run checks or type fixes.
 - Continuing to add “nice-to-have” tests after the definition of done is met.
 - Long theoretical discussions about testing strategy.
 - Deep security audits (point the human to guided-review instead).
@@ -183,11 +202,12 @@ This skill is the final gate of the guided family. Actively recommend the right 
 | “Failures need new implementation” | → `guided-coding` |
 | “Failures are structural / messy code” | → `guided-refactoring` |
 | “Failures are quality or security issues” | → `guided-review` |
+| “Infra/scaling growth needs a roadmap” | → `guided-infra` |
 | All relevant checks green | → Stop. Loop is closed. |
 
-**Typical happy path**
+**Typical happy path (automation loop)**
 ```
-guided-docs → guided-plan → guided-coding → guided-review → guided-verify
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
 **Cleaning path**

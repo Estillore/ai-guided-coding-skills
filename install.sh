@@ -14,7 +14,7 @@ set -euo pipefail
 TARGET="${1:-all}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS="$ROOT/skills"
-AGENT="$ROOT/agents/guided.json"
+AGENTS_DIR="$ROOT/agents"
 STEERING="$ROOT/steering/ponytail.md"
 
 if [[ ! -d "$SKILLS" ]]; then
@@ -31,10 +31,10 @@ copy_skills() {
 install_kiro() {
   mkdir -p "$HOME/.kiro/skills" "$HOME/.kiro/agents" "$HOME/.kiro/steering"
   copy_skills "$HOME/.kiro/skills"
-  [[ -f "$AGENT" ]] && cp "$AGENT" "$HOME/.kiro/agents/"
+  [[ -d "$AGENTS_DIR" ]] && cp "$AGENTS_DIR"/*.json "$HOME/.kiro/agents/"
   [[ -f "$STEERING" ]] && cp "$STEERING" "$HOME/.kiro/steering/"
   echo "OK  Kiro     -> $HOME/.kiro/skills"
-  echo "    agent    -> $HOME/.kiro/agents/guided.json"
+  echo "    agents   -> $HOME/.kiro/agents/guided*.json"
   echo "    steering -> $HOME/.kiro/steering/ponytail.md"
 }
 
@@ -57,6 +57,13 @@ install_zed() {
 
 echo "Installing guided skills (target: $TARGET)..."
 echo ""
+
+if [[ -d "$ROOT/scripts" ]]; then
+  mkdir -p "$HOME/.guided/scripts"
+  cp -R "$ROOT/scripts"/* "$HOME/.guided/scripts/"
+  echo "OK  Harness  -> $HOME/.guided/scripts (guided_run.py)"
+  echo ""
+fi
 
 case "$TARGET" in
   kiro) install_kiro ;;

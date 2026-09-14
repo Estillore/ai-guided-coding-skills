@@ -10,9 +10,9 @@ description: Extract the essential mental model and key things to remember when 
 Help the developer learn and understand. Focus on the essential mental model, the few important rules to remember, and clear, complete minimal examples.
 
 **Core contract**
-- AI shows the complete, accurate information needed (external docs or project structure).
-- Human reads, internalizes, and types any notes or examples they want to keep.
-- AI never edits the codebase or documentation files unless the human explicitly asks later.
+- AI outputs the complete, accurate information needed (external docs or project structure) and updates project memory directly.
+- AI may create minimal notes/examples in the memory file when they will help future sessions.
+- This skill never blocks the pipeline; after understanding, chain to `guided-plan`.
 
 This skill is the learning entry point for the guided family. Use it first, then switch to the other skills.
 
@@ -61,6 +61,10 @@ Last updated: YYYY-MM-DD
 ```
 
 Only record what will still be useful next week. Prune ruthlessly.
+
+## Repo-map artifact (grounds every later phase)
+
+After mapping a project, emit/update `docs/repo-map.json` (fallback: `.kiro/repo-map.json` or `.grok/repo-map.json`) matching `references/repo-map-schema.json`: framework + version, entry points, domains, dependency direction, structure style, conventions, gotchas, and the real test commands. Every later phase (plan, coding, review, verify) loads this file instead of re-discovering. Update it when the architecture changes.
 
 ## Kiro IDE support
 
@@ -122,7 +126,7 @@ Activate when the human needs to understand *this* codebase (“explain this fol
 3. **Show complete minimal examples.** Prefer short, correct, copy-ready snippets that illustrate the point. The human still decides what to type or keep.
 4. **Connect to implementation.** When useful, note how this understanding should influence the next step with guided-coding or guided-plan.
 5. **Stay terse.** One clear explanation is better than many paragraphs.
-6. **Never edit the codebase.** This skill only explains and extracts mental models.
+6. **Update memory, don't touch prod code.** Write new high-value facts to project memory directly; leave production code to guided-coding.
 
 ## Workflow
 
@@ -175,9 +179,9 @@ This skill is the entry point of a complete guided workflow. After the mental mo
 | “Is this solid? What should I strengthen?” | → `guided-review` |
 | “Are we done? Show me the checks” | → `guided-verify` |
 
-**Default happy path**
+**Default happy path (automation loop)**
 ```
-guided-docs → guided-plan → guided-coding → guided-review → guided-verify
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
 When cleaning existing code:

@@ -1,18 +1,18 @@
 ---
 name: guided-planner
-description: Coach the human through creating a complete, actionable implementation plan. AI shows the full plan with phases, exact file paths, risks, and testing strategy. Human owns and types the plan (or rewrites it). Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided planning, architecture decision, short plan before coding, or when you need a testable plan first.
+description: Create a complete, actionable implementation plan and proceed. AI outputs the full plan with phases, exact file paths, risks, and testing strategy, updates memory, and chains to implementation in autonomous runs. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for planning, architecture decision, or when you need a testable plan first.
 ---
 
 # Guided Planner
 
 ## Overview
 
-Force the AI into a strict coaching role for planning. The AI shows a complete, minimal, correct implementation plan (phases, file paths, risks, testing strategy). The human types or rewrites their own version. This absorbs architect-level thinking while keeping ownership with the human.
+Force the AI into autonomous planning. The AI outputs a complete, minimal, correct implementation plan (phases, file paths, risks, testing strategy), updates memory, and proceeds to implementation.
 
 **Core contract**
-- AI shows the complete plan (structure and concrete steps).
-- Human types / rewrites the plan.
-- AI never creates plan files or edits the codebase.
+- AI outputs the complete plan (structure and concrete steps).
+- AI updates memory and chains to `guided-coding` in autonomous runs.
+- AI may create plan files directly when the project uses them.
 
 Companion to `guided-plan`. Prefer this when you want the richer ECC-style plan format with explicit phases, risks, and success criteria.
 
@@ -26,18 +26,18 @@ Companion to `guided-plan`. Prefer this when you want the richer ECC-style plan 
 | Implementation looks done | → `guided-review` |
 | Need verification | → `guided-verify` |
 
-**Default happy path**
+**Default happy path (automation loop)**
 ```
-guided-docs → guided-planner → guided-coding → guided-review → guided-verify
+guided-docs → guided-planner → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
 ## Project Memory
 
-Load `.grok/project-memory.md` (or `.kiro/project-memory.md` / `AGENTS.md`) first. Do not re-discover what is already recorded. Update after meaningful architectural discoveries (prefer a Project Memory section in `AGENTS.md` when running in OpenCode).
+Load `.grok/project-memory.md` (or `.kiro/project-memory.md` / `AGENTS.md`) plus `docs/repo-map.json` when present first. Do not re-discover what is already recorded. Update after meaningful architectural discoveries (prefer a Project Memory section in `AGENTS.md` when running in OpenCode).
 
 ## OpenCode support
 
-Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Prefer the **Plan** agent. AI shows the full plan; human types or rewrites it. Never create plan files automatically.
+Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Prefer the **Plan** agent for analysis, then chain to Build for autonomous implementation.
 
 ## Zed support
 
@@ -90,8 +90,8 @@ Produce a full plan in this exact format (adapted from ECC planner):
 - [ ] Criterion 2
 ```
 
-### 3. Human ownership
-Tell the human: "Type or rewrite this plan in your own words / your preferred location. Confirm when you have the plan you will actually follow."
+### 3. Apply ownership
+Save the plan to memory (and to a plan file when the project uses one). In autonomous runs proceed directly to implementation.
 
 ### 4. Phasing rule
 Every phase must be independently mergeable and deliver value. Never show a plan that requires all phases before anything works.
@@ -117,5 +117,5 @@ Every phase must be independently mergeable and deliver value. Never show a plan
 ## Output style
 
 - One complete plan at a time.
-- After the human confirms ownership, hand off to the next guided skill.
+- Chain to the next guided skill immediately after the plan is saved.
 - Never write the plan file yourself.

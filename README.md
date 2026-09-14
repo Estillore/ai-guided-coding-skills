@@ -1,15 +1,15 @@
 # AI Guided Coding Skills
 
-Coaching skills that keep **you** writing the code.
+Automation skills that ship quality code end-to-end.
 
 Works with **Kiro**, **Grok**, **OpenCode**, and **Zed** on **Windows** and **macOS** (Linux too).
 
-| AI does | You do |
-|---------|--------|
-| Shows the complete minimal solution | Type every line |
-| Plans, reviews, and verifies | Own the production code |
+| AI does | You get |
+|---------|---------|
+| Implements the complete minimal solution | Reviewed, verified changes |
+| Plans, refactors, reviews, and verifies | Evidence + one-sentence why per decision |
 
-AI never edits your repo. You learn by typing, not by accepting patches.
+AI edits your repo directly, runs checks, and auto-fixes (max 3 loops) — fully autonomous.
 
 ---
 
@@ -24,7 +24,7 @@ AI never edits your repo. You learn by typing, not by accepting patches.
 
 Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders work across these tools.
 
-> **Kiro-only extras:** `agents/guided.json` and `steering/ponytail.md`  
+> **Kiro-only extras:** `agents/*.json` (orchestrator + planner/builder/reviewer) and `steering/ponytail.md`  
 > OpenCode, Grok, and Zed load coaching rules from each skill’s `SKILL.md`.
 
 ---
@@ -108,21 +108,63 @@ Natural language also works, for example:
 
 ---
 
-## Happy path
+## Happy path (automation loop)
 
 ```
-guided-docs → guided-plan → guided-coding → guided-review → guided-verify
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
+
+`guided-refactoring` always runs after coding as the quality-maintenance step (auto-skips when clean), so review + verify check already-maintained code.
+
+When the change touches infrastructure (or growth signals cross), `guided-verify` appends a growth watch and points to `guided-infra`, which turns signals into a staged Now/Next/Later roadmap (Docker reliability, Cloudflare edge, data scale, architecture rungs).
 
 | When… | Use |
 |-------|-----|
 | Learning a library or codebase | `guided-docs` |
 | Need a plan before code | `guided-plan` |
 | Implementing a feature / bug fix | `guided-coding` |
-| Code is messy / vibe-coded | `guided-refactoring` |
-| Pure test-first coaching | `guided-tdd` |
-| Quality + security review | `guided-review` |
+| Keep structure clean (always-on in loop) | `guided-refactoring` |
+| Pure test-first automation | `guided-tdd` |
+| Quality + security review + auto-fix | `guided-review` |
 | Confirm tests / checks are green | `guided-verify` |
+| Infra / architecture growth roadmap | `guided-infra` |
+
+---
+
+## Complex features (ECC-style rigor, architecture focus)
+
+Simple tasks run single-agent with the loop above. Complex/multi-slice work splits into roles with fresh context per phase:
+
+| Agent (Kiro `agents/`) | Role | Skills used |
+|------------------------|------|-------------|
+| `guided` | Orchestrator — runs the whole loop | all |
+| `guided-planner` | Read-only: maps slice, emits validated Plan IR | guided-docs, guided-plan |
+| `guided-builder` | Implements slices with TDD + refactoring, stays in blast radius | guided-coding, guided-refactoring |
+| `guided-reviewer` | Review-fixes + verify with evidence report | guided-review, guided-verify |
+
+Two archify-inspired artifacts make phases machine-checkable instead of prose-only:
+
+- **Plan IR** (`skills/guided-plan/references/plan-schema.json`) — typed plan JSON (goal, blast radius, steps, test strategy, invariants, outbox, accuracy, done criteria). Gate: `python ~/.guided/scripts/guided_run.py validate-plan <plan.json> [--changed <files>]` must print `PLAN IR: PASS` before building; verify re-runs it with `--changed` to catch blast-radius drift.
+- **Repo-map** (`skills/guided-docs/references/repo-map-schema.json`) — structured snapshot (`docs/repo-map.json`) with framework, entry points, dependency direction, conventions, and real test commands. Emitted by guided-docs, loaded by every later phase instead of re-discovering.
+
+---
+
+## Harness (`guided-run`)
+
+Skills are the agent contract; `scripts/guided_run.py` (stdlib-only, installed to `~/.guided/scripts/`) is the enforcement. The harness runs every deterministic part, the agent keeps every judgment part (writing code, review findings):
+
+| Command | What it enforces |
+|---------|------------------|
+| `validate-plan <plan.json> [--changed <files>]` | Strict IR keys, steps-in-radius, blast-radius drift |
+| `verify [--repo DIR] [--plan plan.json]` | Ladder (typecheck→unit→lint→build, stops at first red) + planned mutation/contract/arch gates, writes `guided-receipts/<run-id>/verify.json`, exit 0 only on full PASS |
+| `react-doctor [--repo DIR] [--scope S] [--blocking LVL]` | React-only audit lane: detects React, provisions the pinned react-doctor (auto-download on first use), scans as JSON. PASS/SKIP = 0, blocking findings = 1 |
+| `growth [--repo DIR] [--no-memory]` | Advisory infra + architecture growth scan (compose/Dockerfile gaps, Cloudflare, DB, queue, cache, storage, auth, observability, secret hygiene, layer signals). Writes `growth.json` + refreshes repo-map `infrastructure`/`growth`. Always exit 0 |
+| `php-audit [--repo DIR] [--scope full\|changed] [--blocking LVL]` | PHP audit lane: runs project-installed auditors only (phpstan JSON, pint --test, composer audit JSON, rector dry-run, deptrac JSON, psalm taint, warden JSON). Never installs anything. PASS/SKIP = 0, blocking findings = 1 |
+| `init [--repo DIR]` | Scaffolds `docs/repo-map.json` from detected project facts |
+
+```powershell
+python ~/.guided/scripts/guided_run.py verify --repo . --plan plan.json
+```
 
 ---
 
@@ -153,6 +195,7 @@ guided-docs → guided-plan → guided-coding → guided-review → guided-verif
 | `guided-review` | Quality + security review |
 | `guided-code-reviewer` | Code-review companion |
 | `guided-verify` | Commands, expected results, minimal fixes |
+| `guided-infra` | Infra + architecture growth roadmap (Now/Next/Later) |
 
 Install always copies from the `skills/` folder (canonical source).
 
@@ -223,7 +266,7 @@ cd ai-guided-coding-skills
 
 New-Item -ItemType Directory -Force -Path "$HOME\.kiro\skills", "$HOME\.kiro\agents", "$HOME\.kiro\steering" | Out-Null
 Copy-Item -Path ".\skills\*" -Destination "$HOME\.kiro\skills\" -Recurse -Force
-Copy-Item -Path ".\agents\guided.json" -Destination "$HOME\.kiro\agents\" -Force
+Copy-Item -Path ".\agents\*.json" -Destination "$HOME\.kiro\agents\" -Force
 Copy-Item -Path ".\steering\ponytail.md" -Destination "$HOME\.kiro\steering\" -Force
 ```
 
@@ -234,7 +277,7 @@ cd ai-guided-coding-skills
 
 mkdir -p ~/.kiro/skills ~/.kiro/agents ~/.kiro/steering
 cp -R skills/* ~/.kiro/skills/
-cp agents/guided.json ~/.kiro/agents/
+cp agents/*.json ~/.kiro/agents/
 cp steering/ponytail.md ~/.kiro/steering/
 ```
 
@@ -249,7 +292,7 @@ Run from **your project root**. Adjust the path to this repo if needed.
 $SRC = "..\ai-guided-coding-skills"
 New-Item -ItemType Directory -Force -Path ".\.kiro\skills", ".\.kiro\agents", ".\.kiro\steering" | Out-Null
 Copy-Item -Path "$SRC\skills\*" -Destination ".\.kiro\skills\" -Recurse -Force
-Copy-Item -Path "$SRC\agents\guided.json" -Destination ".\.kiro\agents\" -Force
+Copy-Item -Path "$SRC\agents\*.json" -Destination ".\.kiro\agents\" -Force
 Copy-Item -Path "$SRC\steering\ponytail.md" -Destination ".\.kiro\steering\" -Force
 ```
 
@@ -258,7 +301,7 @@ Copy-Item -Path "$SRC\steering\ponytail.md" -Destination ".\.kiro\steering\" -Fo
 SRC=../ai-guided-coding-skills
 mkdir -p .kiro/skills .kiro/agents .kiro/steering
 cp -R "$SRC"/skills/* .kiro/skills/
-cp "$SRC"/agents/guided.json .kiro/agents/
+cp "$SRC"/agents/*.json .kiro/agents/
 cp "$SRC"/steering/ponytail.md .kiro/steering/
 ```
 
@@ -321,7 +364,7 @@ In chat / agent panel, look for skills like `/guided-coding` or ask the agent to
 install.ps1             ← Windows installer (all tools)
 install.sh              ← macOS / Linux installer (all tools)
 skills/                 ← install from here (all guided skills)
-agents/guided.json      ← Kiro guided agent
+agents/guided*.json     ← Kiro agents: orchestrator + planner/builder/reviewer
 steering/ponytail.md    ← Kiro always-on style
 guided-*/               ← core workflow skills (same content as skills/)
 backup-old/             ← previous snapshot (reference only)

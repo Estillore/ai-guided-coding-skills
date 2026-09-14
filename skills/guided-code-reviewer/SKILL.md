@@ -1,18 +1,18 @@
 ---
 name: guided-code-reviewer
-description: Coach the human through a rigorous code review. AI shows concrete findings with exact lines, failure modes, and minimal fixes. Human decides and types every change. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided review, code review, security review, what should I strengthen, or after implementation before merge.
+description: Autonomous rigorous code review that auto-fixes. AI finds concrete issues with exact lines and failure modes, applies minimal fixes for CRITICAL/HIGH, and lists the rest. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for review, code review, security review, what should I strengthen, or after implementation before merge.
 ---
 
 # Guided Code Reviewer
 
 ## Overview
 
-Force the AI into a strict coaching role for code review. The AI shows confident, actionable findings (with proof for HIGH/CRITICAL) and the minimal strengthened version. The human decides which findings to accept and types every fix. This keeps ownership and learning with the human.
+Force the AI into autonomous code review. The AI finds confident, actionable issues (with proof for HIGH/CRITICAL), applies minimal fixes for must-fix items, and reports the rest.
 
 **Core contract**
-- AI shows findings + the minimal correct fix for each accepted issue.
-- Human decides and types the changes.
-- AI never edits the codebase or applies patches.
+- AI applies minimal fixes for CRITICAL/HIGH directly.
+- AI lists MEDIUM/LOW as follow-ups (or fixes trivial ones inline).
+- AI reports each fix with file:line + failure mode prevented.
 
 Companion to `guided-review`. Prefer this when you want the stricter ECC-style confidence filtering, false-positive avoidance, and severity gates.
 
@@ -25,9 +25,9 @@ Companion to `guided-review`. Prefer this when you want the stricter ECC-style c
 | Need verification commands | → `guided-verify` |
 | Security is the primary concern | Stay here (security is first-class) |
 
-**Default happy path**
+**Default happy path (automation loop)**
 ```
-guided-docs → guided-plan → guided-coding → guided-review → guided-verify
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
 ## Project Memory
@@ -36,7 +36,7 @@ Load project memory first (`.grok/project-memory.md`, `.kiro/project-memory.md`,
 
 ## OpenCode support
 
-Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible locations). Works with Plan (read-only review) and Build (coaching only — human types every fix). Follows the same Agent Skills standard as the rest of the guided family.
+Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible locations). Works with Plan (read-only review) and Build (AI auto-fixes must-fix findings). Follows the same Agent Skills standard as the rest of the guided family.
 
 ## Zed support
 
@@ -79,11 +79,11 @@ Why existing guards do not catch it: ...
 Minimal fix: [show the exact code the human should type]
 ```
 
-### 5. Human decision
-After the list, say: "Which findings do you want to address? I will show the complete minimal change for each one you accept. You type it."
+### 5. Auto-fix decision
+Auto-apply minimal fixes for CRITICAL/HIGH; list MEDIUM/LOW as follow-ups (fix trivial ones inline).
 
-### 6. Show the minimal fix
-For each accepted finding, show the complete, minimal, correct patch (as a code block with path). Human types it.
+### 6. Apply the minimal fix
+For each must-fix finding, apply the complete, minimal, correct patch directly and report file:line.
 
 ## Common false positives the AI must never report
 
@@ -99,5 +99,4 @@ For each accepted finding, show the complete, minimal, correct patch (as a code 
 
 - Zero findings is a valid and preferred outcome when the code is clean.
 - Never invent issues to look thorough.
-- One finding + one minimal fix at a time once the human starts accepting.
-- Never edit files yourself.
+- Apply one finding + one minimal fix at a time, re-scanning after each.

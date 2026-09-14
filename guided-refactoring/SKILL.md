@@ -1,18 +1,18 @@
 ---
 name: guided-refactoring
-description: Coach the human through refactoring vibe-coded or messy code to match framework standards and project conventions. AI diagnoses with code smells (Refactoring Guru style), shows the complete cleaned target (including the rewritten logic), and names the technique when useful; the human types every change one tiny step at a time. Uses Documentation-is-Truth, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Works in any Kiro workflow (especially Bug Fix and Spec), in Grok, in OpenCode, and in Zed. Use for refactor this, clean this vibe code, make it match Next.js standards, strengthen this client app, or fix structural problems after a bug fix.
+description: Autonomous refactoring of vibe-coded or messy code to match framework standards and project conventions. AI diagnoses code smells, applies the complete cleaned version directly, runs checks, and reports. Uses Documentation-is-Truth, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Works in any Kiro workflow (especially Bug Fix and Spec), in Grok, in OpenCode, and in Zed. Use for refactor this, clean this vibe code, make it match standards, or fix structural problems.
 ---
 
 # Guided Refactoring
 
 ## Overview
 
-Force the AI into a strict coaching role for refactoring that eliminates guesswork while preserving ownership and learning.
+Force the AI into autonomous refactoring that eliminates guesswork and ships the cleanup.
 
 **Core contract**
-- AI diagnoses the mismatches and shows the complete cleaned target (structure **and** the rewritten logic).
-- Human types every change, one tiny step at a time.
-- AI never edits the codebase, never applies patches, never creates or overwrites production files.
+- AI diagnoses the mismatches and applies the complete cleaned version directly.
+- AI runs the relevant checks and auto-fixes (max 3 loops).
+- AI reports each change with file:line + technique used.
 
 This skill is the natural follow-up to `guided-docs`. Use guided-docs first to extract the essential standards of the framework (Next.js, Laravel, etc.), then switch here to drive the refactor.
 
@@ -27,6 +27,12 @@ This skill is the structural cleanup step of the guided family. Actively recomme
 | “Structure is clean, now implement the new feature” | → `guided-coding` |
 | “Refactor done — is the code solid?” | → `guided-review` |
 | “Confirm nothing broke” | → `guided-verify` |
+
+**Automation loop position (always-on quality step)**
+```
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
+```
+`guided-refactoring` always runs after coding in autonomous runs: clean structure, remove duplication, re-apply Ponytail — then chain to review. Auto-skip rule: if no smells, no Ponytail violations, and no convention drift are found, log `refactor: clean, skipped` and chain forward immediately (no empty edits).
 
 **Typical cleaning path**
 ```
@@ -101,13 +107,13 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 | OpenCode agent | How to use this skill |
 |----------------|-----------------------|
 | **Plan** | Safe for diagnosis and planning the cleanup sequence (read-only). |
-| **Build** | Use for the actual coached steps. Keep the coaching contract — AI shows the cleaned target; you type every change one tiny step at a time. |
+| **Build** | Use for the actual cleanup steps. AI applies each step directly, runs checks, and auto-fixes. |
 
 Update project memory into `AGENTS.md` or `.grok/project-memory.md` so the cleaned conventions stick for later sessions and other guided skills.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-refactoring` or `@guided-refactoring`. Keep the coaching contract (AI shows cleaned target; you type every change). Prefer updating `AGENTS.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-refactoring` or `@guided-refactoring`. Automation contract (AI applies the cleaned version directly). Prefer updating `AGENTS.md`.
 
 ## Documentation is Truth (highest priority for the target shape)
 
@@ -141,7 +147,7 @@ This skill must work well across many different codebases and frameworks (Next.j
 
 ## Adaptability (when the target is an existing project)
 
-1. **Load memory first** — read `.grok/project-memory.md` / `.kiro/project-memory.md` (or fallbacks). Skip re-discovery of known facts.
+1. **Load memory + repo-map first** — read `.grok/project-memory.md` / `.kiro/project-memory.md` (or fallbacks) and `docs/repo-map.json` when present. Skip re-discovery of known facts.
 2. **Discover** — detect framework + version, then check for `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, project-local skills, and Kiro files. Map:
    - Entry points, domain/layer boundaries, dependency direction
    - Folder layout, Server vs Client boundaries, naming, data-fetching style
@@ -152,12 +158,10 @@ This skill must work well across many different codebases and frameworks (Next.j
 
 ## Core Rules (always enforce)
 
-1. **AI shows the complete cleaned target; human types every change.**  
-   - AI may (and should) show the full correct cleaned version of a step, including the rewritten logic.  
-   - The human must type every changed line themselves.  
-   - Never use edit/write tools on production files.  
-   - Never apply patches, never create or overwrite files with real logic.  
-   - If the environment tries to edit files, refuse and say: “Stay in coaching mode only. I show the cleaned version; you type the change.”
+1. **AI applies the complete cleaned version directly.**
+   - Apply the full correct cleaned version for each step, including the rewritten logic, via edit/write tools.
+   - Run the relevant checks after each step; auto-fix (max 3 loops).
+   - Never leave stubs or unapplied patches.
 
 2. **Documentation is Truth** (official docs of every library → project convention → canonical).
 
@@ -165,9 +169,9 @@ This skill must work well across many different codebases and frameworks (Next.j
 
 4. **Behavior stays identical.** Never change what the feature does — only how it is structured (unless the human explicitly asks for a behavior change).
 
-5. **One tiny step at a time.** Never dump a full rewrite. Give the single next action, show the exact target for that step, wait for the human to finish it, then continue.
+5. **One tiny step at a time, applied immediately.** Apply the single next change, verify it, then continue.
 
-6. **Terse coaching voice.** Speak like the laziest senior developer. Short, direct, no fluff.
+6. **Terse automation voice.** Speak like the laziest senior developer. Short, direct, no fluff.
 
 ## Workflow (follow in order)
 
@@ -197,12 +201,11 @@ This skill must work well across many different codebases and frameworks (Next.j
 - Explicitly reject any change that is not required or that violates Ponytail.
 - Ask for confirmation only if the order is ambiguous.
 
-### 4. Coach one step at a time
-- Tell the human exactly which file and which part to open.
-- Optionally name the refactoring technique being applied (so the human learns the vocabulary).
-- Show the complete cleaned target for **this single step** (including the rewritten logic).
-- Human types the change.
-- After the human pastes the result, re-diagnose only what remains and give the next step.
+### 4. Apply one step at a time
+- Open the exact file and section via read tools.
+- Optionally name the refactoring technique being applied.
+- Apply the complete cleaned version for **this single step** directly.
+- Re-diagnose only what remains and continue to the next step.
 - Repeat until the definition of done is reached.
 
 ### 5. Close

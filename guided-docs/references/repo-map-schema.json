@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Guided Repo Map",
+  "description": "Structured architecture snapshot emitted by guided-docs and consumed by every later phase (plan, coding, review, verify). Archify-style: one typed artifact grounds all phases instead of re-discovering per session. Stored at docs/repo-map.json (preferred) or .kiro/repo-map.json / .grok/repo-map.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["framework", "entry_points", "structure_style", "source_of_standards"],
+  "properties": {
+    "generated": { "type": "string" },
+    "framework": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "source_of_standards": { "type": "string" },
+    "entry_points": { "type": "array", "items": { "type": "string" } },
+    "domains": { "type": "array", "items": { "type": "string" } },
+    "dependency_direction": { "type": "string" },
+    "structure_style": { "type": "string" },
+    "conventions": { "type": "array", "items": { "type": "string" } },
+    "decisions_gotchas": { "type": "array", "items": { "type": "string" } },
+    "test_commands": {
+      "type": "object",
+      "properties": {
+        "typecheck": { "type": "string" },
+        "unit": { "type": "string" },
+        "lint": { "type": "string" },
+        "build": { "type": "string" },
+        "e2e": { "type": "string" },
+        "coverage": { "type": "string" }
+      }
+    },
+    "open_questions": { "type": "array", "items": { "type": "string" } }
+  }
+}

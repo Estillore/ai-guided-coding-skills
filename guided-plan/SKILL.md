@@ -1,18 +1,18 @@
 ---
 name: guided-plan
-description: Produce a short or full testable plan before any code. AI shows the complete plan (short mode or full ECC-style with phases, risks, mitigations, success criteria); the human types or rewrites their own version. Absorbs architect-level thinking. Uses codebase mapping and self-regenerative project memory. DeepSeek Harness is the heart for exploration; the guided skill enforces ownership. Includes Large Codebase Mode and Blast Radius control. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for guided plan, full implementation plan, architecture, short plan before coding, ADR, phased plan, or decide the structure first.
+description: Produce a short testable plan and proceed to implementation. AI outputs the complete plan (goals, constraints, structure, key decisions, test strategy, blast radius 1-3 files) and updates project memory directly. In fully autonomous runs AI proceeds to guided-coding without waiting. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for plan, architecture, phased plan, or decide the structure first.
 ---
 
 # Guided Plan
 
 ## Overview
 
-Force a short, high-quality plan before implementation. This prevents wasted coding and keeps the human in control of the design.
+Force a short, high-quality plan before implementation. This prevents wasted coding.
 
 **Core contract**
-- AI shows the complete minimal plan (goals, constraints, structure, key decisions, test strategy).
-- Human types or rewrites their own final version.
-- AI never edits the codebase or creates plan files unless the human explicitly asks.
+- AI outputs the complete minimal plan (goals, constraints, structure, key decisions, test strategy, blast radius).
+- AI updates project memory directly with new architecture facts.
+- In fully autonomous runs AI proceeds to `guided-coding` without waiting for approval.
 
 This skill sits between understanding and implementation:
 
@@ -115,7 +115,7 @@ Record the chosen source of standards in project memory. When Harness is recomme
 
 ## Adaptability (when planning inside an existing codebase)
 
-1. Load project memory first.
+1. Load project memory + `docs/repo-map.json` first (fallbacks: `.kiro/repo-map.json`, `.grok/repo-map.json`).
 2. Detect framework + version, then discover entry points, layer boundaries, dependency direction, and relevant conventions if memory is incomplete.
 3. Summarize only what matters for the current plan (a few bullets). Include which source of standards is being used.
 4. All plans must follow the Documentation is Truth priority order above.
@@ -123,12 +123,10 @@ Record the chosen source of standards in project memory. When Harness is recomme
 
 ## Core Rules
 
-1. **AI shows the complete minimal plan; human owns the final version. This rule is absolute.**  
-   - AI may present a full short plan, including structure and key decisions.  
-   - The human must type or consciously rewrite their own plan.  
-   - Never create or edit plan/ADR files unless the human explicitly requests it.  
-   - **Mandatory refusal**: If the environment tries to create or edit plan files, refuse with:  
-     > “Stay in coaching mode only. I show the complete plan; you type or rewrite your own version. I will not edit files.”
+1. **AI outputs the complete minimal plan and proceeds. This rule is absolute.**
+   - Present a full short plan, including structure and key decisions.
+   - Update project memory and proceed to implementation in autonomous runs.
+   - Create plan/ADR files directly when the project uses them.
 
 2. **Documentation is Truth** (official docs of every library → project convention → canonical).
 
@@ -147,13 +145,13 @@ Record the chosen source of standards in project memory. When Harness is recomme
 6. **Reliable events use Transactional Outbox.**  
    When a write must be followed by an event (WebSocket, queue, EventBus), default to the outbox pattern so a crash cannot leave the system with committed data but no event.
 
-7. **Active Confirmation on key decisions.**  
-   When the plan contains a critical or non-obvious design choice (permission model, invariant, event strategy, library integration boundary, architecture decision), after showing the plan the AI asks one short question.  
-   - Correct answer → continue.  
-   - “I don’t know” or wrong answer → AI gives a one-sentence explanation, then asks the human to restate it in their own words. Only then continue.  
-   This keeps ownership and learning high without creating a blocker. Prefer this over long explanations.
+7. **Decision log (no gate).**
+   For critical or non-obvious choices (permission model, invariant, event strategy, architecture decision), add a one-line rationale inline. Never stop to quiz; keep moving.
 
-8. **Terse senior voice.** Short, direct, no fluff.
+8. **Plan the accuracy gates.**
+   Every non-trivial plan fills the Plan IR `accuracy` block: mutation scope + thresholds for touched business logic (Infection/Stryker), contract tests for any changed request/response shape (Pact or fixture-vs-live), arch rules for any layer/dependency touch (Deptrac / Pest `arch()` / dependency-cruiser). Trivial slices may set only thresholds; never skip silently — record `n/a` with a reason.
+
+9. **Terse senior voice.** Short, direct, no fluff.
 
 ## Modes
 
@@ -167,6 +165,7 @@ For most features and bug fixes.
 - Minimal files and changes
 - Key decisions (with one-line rationale)
 - Test strategy (what will prove it works)
+- Accuracy gates (mutation scope/thresholds, contract tests, arch rules — the Plan IR `accuracy` block)
 - Definition of done
 
 ### 2. Architecture mode
@@ -185,7 +184,7 @@ Activate when the change is large, cross-cutting, or the human asks for architec
 - Force a short map of the *relevant slice only* (package, ownership, entry points).
 - Declare expected blast radius (files touched). Default to 1–3 files. Larger changes need explicit justification.
 - Include a short recommended Harness composition (mode + key constraints) using official patterns.
-- Keep the same contract: AI shows the plan, human owns and types the final version. Harness output is never the final source of truth.
+- Keep the same contract: AI outputs the plan, saves it, and proceeds. Never leave Harness output as the only artifact.
 
 ### 3. Full plan mode (ECC-style)
 
@@ -275,9 +274,12 @@ This mode exists to keep the AI in the assistant seat and the human as the owner
 3. **Show the complete plan**  
    Choose Short (default), Architecture, Full, or **Human Design Support** mode as appropriate. Apply Ponytail ruthlessly.  
    When the human already has a design, prefer Human Design Support mode.
-4. **Human owns it**  
-   Tell the human to type or rewrite the final plan in their own words / file.  
-   Offer to refine after they paste their version.
+4. **Apply it + Plan IR gate (mandatory)**
+   Save the final plan to memory (and to a plan/ADR file when the project uses one).
+   Emit the Plan IR as JSON matching `references/plan-schema.json` (shape example: `examples/plan-ir.example.json — structural reference only, never copy its facts`) and run the validator:
+   `python ~/.guided/scripts/guided_run.py validate-plan <plan.json>` (harness entry; raw script lives at `scripts/` in the skills repo).
+   Fix the plan until it prints `PLAN IR: PASS`. `guided-builder` must not start on a FAIL.
+   In autonomous runs proceed directly to `guided-coding` (or `guided-refactoring` for cleanup).
 
 5. **Update memory** (if new decisions are high-value)
 
@@ -293,12 +295,13 @@ This mode exists to keep the AI in the assistant seat and the human as the owner
 
 Always state the recommendation clearly.
 
-## Connected workflow
+## Connected workflow (automation loop)
 
 ```
-guided-docs → guided-plan → guided-coding → guided-review → guided-verify
-                 ↘ guided-refactoring ↗
+guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
+
+`guided-refactoring` always runs after coding (auto-skips when clean) so review + verify check already-maintained code.
 
 Harness guidance surfaces passively inside guided-plan (Architecture mode) and guided-coding (Harness Power Mode) when the work is agentic. No separate skill required.
 

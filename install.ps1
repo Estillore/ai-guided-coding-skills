@@ -18,7 +18,8 @@ $Root = $PSScriptRoot
 if (-not $Root) { $Root = Get-Location }
 
 $Skills = Join-Path $Root "skills"
-$Agent = Join-Path $Root "agents\guided.json"
+$Scripts = Join-Path $Root "scripts"
+$AgentsDir = Join-Path $Root "agents"
 $Steering = Join-Path $Root "steering\ponytail.md"
 
 if (-not (Test-Path $Skills)) {
@@ -38,11 +39,11 @@ function Install-Kiro {
 
     New-Item -ItemType Directory -Force -Path $kiroSkills, $kiroAgents, $kiroSteering | Out-Null
     Copy-SkillsTo $kiroSkills
-    if (Test-Path $Agent) { Copy-Item -Path $Agent -Destination $kiroAgents -Force }
+    if (Test-Path $AgentsDir) { Copy-Item -Path (Join-Path $AgentsDir "*.json") -Destination $kiroAgents -Force }
     if (Test-Path $Steering) { Copy-Item -Path $Steering -Destination $kiroSteering -Force }
 
     Write-Host "OK  Kiro     -> $kiroSkills"
-    Write-Host "    agent    -> $kiroAgents\guided.json"
+    Write-Host "    agents   -> $kiroAgents\guided*.json"
     Write-Host "    steering -> $kiroSteering\ponytail.md"
 }
 
@@ -68,6 +69,14 @@ function Install-Zed {
 
 Write-Host "Installing guided skills (target: $Target)..."
 Write-Host ""
+
+$GuidedHome = Join-Path $HOME ".guided\scripts"
+if (Test-Path $Scripts) {
+    New-Item -ItemType Directory -Force -Path $GuidedHome | Out-Null
+    Copy-Item -Path (Join-Path $Scripts "*") -Destination $GuidedHome -Recurse -Force
+    Write-Host "OK  Harness  -> $GuidedHome (guided_run.py)"
+    Write-Host ""
+}
 
 switch ($Target) {
     "kiro"     { Install-Kiro }
