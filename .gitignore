@@ -2,3 +2,6 @@
 Thumbs.db
 *.bak
 .guided-coding.bak/
+
+__pycache__/
+*.pyc
