@@ -1,0 +1,27 @@
+// Guided PHP MCPs for OpenCode — merge under "mcp" in opencode.json.
+// Disabled by default: flip "enabled" to true per server to activate.
+// Replace <GUIDED_MCP> with your absolute ~/.guided/mcp path,
+// e.g. "C:/Users/you/.guided/mcp" (forward slashes work on Windows).
+// OpenCode v2 nests these under "mcp.servers" instead of "mcp".
+{
+  "phpstan": {
+    "type": "local",
+    "command": ["php", "<GUIDED_MCP>/mcp-phpstan-server/bin/mcp-phpstan"],
+    "enabled": false
+  },
+  "phpcs": {
+    "type": "local",
+    "command": ["php", "<GUIDED_MCP>/mcp-phpcs-server/bin/mcp-phpcs"],
+    "enabled": false
+  },
+  "php-composer": {
+    "type": "local",
+    "command": ["php", "<GUIDED_MCP>/php-composer-mcp.phar"],
+    "enabled": false
+  },
+  "laravel-boost": {
+    "type": "local",
+    "command": ["php", "<LARAVEL_PROJECT>/artisan", "boost:mcp"],
+    "enabled": false
+  }
+}

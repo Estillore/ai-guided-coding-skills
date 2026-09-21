@@ -151,6 +151,7 @@ When the code under review is a PHP project, deterministic auditor evidence feed
    - `SKIP` (not PHP / no php on PATH / no tools installed) → continue skill-only, note why in one line. A bare `composer.json` with zero tools is itself a follow-up: recommend installing phpstan + pint.
    - Findings map to severity: `error` class (phpstan, psalm-taint, deptrac, composer critical/high, warden) → CRITICAL/HIGH pipeline (auto-fix), `warning` class (pint, rector drift, composer medium/low) → MEDIUM/LOW follow-ups — each still passes the confidence gate above before reporting.
    - Respect the repo's configs (`phpstan.neon`, `psalm.xml`, `pint.json`, `rector.php`, `deptrac.yaml`, baselines); never re-implement auditor rules here — consume the receipt JSON.
+   - Interactive complement (optional, never evidence): if PHP MCPs are registered (`guided_run.py mcp`), the agent may call `phpstan_analyze` / `phpcs_check` / Boost tools mid-review for exploration. MCP output is a lead — only harness receipts and re-run tool output enter the report.
 
 ## Infrastructure diff lane (in-diff safety only)
 

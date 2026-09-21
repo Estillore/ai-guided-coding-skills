@@ -113,7 +113,7 @@ When the change involves an agent, multi-step tool use, large/monorepo code, or 
    `python ~/.guided/scripts/guided_run.py verify --repo <dir> [--plan <plan.json>]` runs the ladder + planned accuracy gates and writes a JSON receipt (exit 0 = PASS).
    Run the relevant commands in order, capturing output for each (harness does this; manual runs must match it).
    - React projects: run the react-doctor gate (checklist item 7) alongside the ladder — its FAIL routes back to guided-coding.
-   - PHP projects: run the php-audit gate (checklist item 9) alongside the ladder — its FAIL routes back to guided-coding.
+   - PHP projects: run the php-audit gate (checklist item 9) alongside the ladder — its FAIL routes back to guided-coding. Registered PHP MCPs (`phpstan_analyze`, `phpcs_check`, Boost tools) may assist exploration mid-verify, but only harness receipts count as evidence.
    - Infra touched: run the growth watch (checklist item 8) and include its recommendation in the close report.
 
 3. **On failure (error-count rule)**

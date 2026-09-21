@@ -78,6 +78,15 @@ if (Test-Path $Scripts) {
     Write-Host ""
 }
 
+$Mcp = Join-Path $Root "mcp"
+$GuidedMcp = Join-Path $HOME ".guided\mcp"
+if (Test-Path $Mcp) {
+    New-Item -ItemType Directory -Force -Path $GuidedMcp | Out-Null
+    Copy-Item -Path (Join-Path $Mcp "*") -Destination $GuidedMcp -Recurse -Force
+    Write-Host "OK  MCP refs -> $GuidedMcp (snippets disabled-by-default; paste to enable)"
+    Write-Host ""
+}
+
 switch ($Target) {
     "kiro"     { Install-Kiro }
     "grok"     { Install-Grok }

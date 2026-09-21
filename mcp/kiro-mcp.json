@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "phpstan": {
+      "command": "php",
+      "args": ["<GUIDED_MCP>/mcp-phpstan-server/bin/mcp-phpstan"],
+      "disabled": true
+    },
+    "phpcs": {
+      "command": "php",
+      "args": ["<GUIDED_MCP>/mcp-phpcs-server/bin/mcp-phpcs"],
+      "disabled": true
+    },
+    "php-composer": {
+      "command": "php",
+      "args": ["<GUIDED_MCP>/php-composer-mcp.phar"],
+      "disabled": true
+    },
+    "laravel-boost": {
+      "command": "php",
+      "args": ["<LARAVEL_PROJECT>/artisan", "boost:mcp"],
+      "disabled": true
+    }
+  }
+}

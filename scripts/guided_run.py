@@ -32,6 +32,17 @@ Commands:
         taint, warden JSON). Never installs anything. Writes a JSON
         receipt. Exit 0 on PASS or SKIP (not PHP / no php / no tools,
         with reason); 1 on FAIL (blocking-level findings).
+    orchestrator [--repo DIR]
+        External-supervision check: detect the Agent Orchestrator
+        (`ao`) CLI + git worktree readiness. Never installs or
+        clones anything; prints the OS-specific install hint when
+        missing. Writes a JSON receipt. Always exit 0.
+    mcp [--repo DIR] [--print-snippet PLATFORM]
+        PHP MCP readiness check: locate each guided MCP server
+        (phpstan, phpcs, php-composer, laravel-boost), handshake it
+        over stdio, list its tools. Never installs or clones.
+        --print-snippet emits a ready-to-paste client block with
+        resolved paths. Writes a JSON receipt. Always exit 0.
     init [--repo DIR]
         Scaffold docs/repo-map.json from detected project facts.
 
@@ -1212,6 +1223,307 @@ def cmd_php_audit(args):
     return 0 if status in ("PASS", "SKIP") else 1
 
 
+AO_RELEASES = ("https://github.com/Untrivial-ai/agent-orchestrator"
+               "/releases/latest")
+AO_DOCS = "https://orchestrator.inc/docs"
+
+
+def ao_install_hint():
+    """OS-specific Agent Orchestrator install pointer (no side effects)."""
+    import platform
+    base = AO_RELEASES + "/download/agent-orchestrator-"
+    sysname = platform.system().lower()
+    if sysname == "windows":
+        return base + "win32-x64.exe"
+    if sysname == "darwin":
+        arch = "arm64" if platform.machine() == "arm64" else "x64"
+        return base + "darwin-%s.dmg" % arch
+    return base + "linux-x64.AppImage (or .deb/.rpm)"
+
+
+def ensure_orchestrator(repo):
+    """Detect AO supervision readiness. Returns (status, detail dict).
+
+    Never installs or clones: the AO repo is a full desktop app
+    (backend + frontend), not a library. Statuses: READY (ao CLI +
+    git worktree), DEGRADED (ao present, project not git-backed),
+    MISSING (no ao CLI -> install hint).
+    """
+    detail = {"hint": None, "ao_version": None, "git_ready": False}
+    rc, out = sh("git rev-parse --is-inside-work-tree", repo, timeout=30)
+    detail["git_ready"] = (rc == 0 and out.strip() == "true")
+    if not shutil.which("ao"):
+        detail["hint"] = ("%s (releases: %s, docs: %s)"
+                          % (ao_install_hint(), AO_RELEASES, AO_DOCS))
+        return "MISSING", detail
+    rc, out = sh("ao --version", repo, timeout=30)
+    detail["ao_version"] = out.strip()[:80] if rc == 0 else "unknown"
+    if not detail["git_ready"]:
+        detail["hint"] = ("AO requires a git repo for worktree isolation: "
+                          "run git init + one commit in the project")
+        return "DEGRADED", detail
+    return "READY", detail
+
+
+def cmd_orchestrator(args):
+    repo = "."
+    i = 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            repo, i = args[i + 1], i + 2
+        else:
+            i += 1
+    repo = os.path.abspath(repo)
+    sha = git_sha(repo)
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    status, detail = ensure_orchestrator(repo)
+    if status == "READY":
+        print("[READY] orchestrator -> ao %s, git worktree ready"
+              % (detail["ao_version"] or "?"))
+    elif status == "DEGRADED":
+        print("[DEGRADED] orchestrator -> ao present, %s" % detail["hint"])
+    else:
+        print("[MISSING] orchestrator -> ao CLI not found")
+        print("  install: %s" % detail["hint"])
+        print("  guided lanes stay fully usable standalone; AO adds "
+              "supervised workers + Kanban when present")
+    receipt = {"tool": "guided-run orchestrator", "run_id": run_id,
+               "sha": sha, "repo": repo, "status": status,
+               "ao_version": detail["ao_version"],
+               "git_ready": detail["git_ready"], "hint": detail["hint"]}
+    rdir = os.path.join(repo, "guided-receipts", run_id)
+    os.makedirs(rdir, exist_ok=True)
+    rpath = os.path.join(rdir, "orchestrator.json")
+    with open(rpath, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2)
+    print("ORCHESTRATOR: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
+    return 0
+
+
+MCP_SERVERS = {
+    "phpstan": {
+        "repo": "https://github.com/larspohlmann/mcp-phpstan-server",
+        "dirname": "mcp-phpstan-server",
+        "entry": "bin/mcp-phpstan",
+        "tools": ["phpstan_analyze", "phpstan_pro"],
+    },
+    "phpcs": {
+        "repo": "https://github.com/larspohlmann/mcp-phpcs-server",
+        "dirname": "mcp-phpcs-server",
+        "entry": "bin/mcp-phpcs",
+        "tools": ["phpcs_check", "phpcbf_fix"],
+    },
+    "php-composer": {
+        "repo": "https://github.com/baschny/php-composer-mcp",
+        "phar": "php-composer-mcp.phar",
+        "dirname": "php-composer-mcp",
+        "entry": "bin/mcp-server.php",
+        "tools": ["search_packages", "get_package_info",
+                  "read_composer_json", "analyze_project",
+                  "suggest_upgrades"],
+    },
+}
+
+
+def guided_mcp_home():
+    return os.path.join(os.path.expanduser("~"), ".guided", "mcp")
+
+
+def find_mcp_entry(repo, spec):
+    """Locate a server checkout: repo dir, repo/mcp, ~/.guided/mcp."""
+    if spec.get("phar"):
+        c = os.path.join(guided_mcp_home(), spec["phar"])
+        if os.path.isfile(c):
+            return c
+    for base in (repo, os.path.join(repo, "mcp"), guided_mcp_home()):
+        c = os.path.join(base, spec.get("dirname", ""),
+                         spec.get("entry", ""))
+        if os.path.isfile(c):
+            return c
+    return None
+
+
+def mcp_handshake(cmd, cwd=None, timeout=60):
+    """Minimal MCP handshake over stdio. Returns (ok, tools_or_error)."""
+    reqs = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                    "clientInfo": {"name": "guided-run", "version": "1"}}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list",
+         "params": {}},
+    ]
+    blob = "\n".join(json.dumps(r) for r in reqs) + "\n"
+    try:
+        p = subprocess.run(cmd, input=blob, capture_output=True, text=True,
+                           cwd=cwd, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, "spawn failed: %s" % e
+    tools = []
+    for line in (p.stdout or "").splitlines():
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue
+        if msg.get("id") == 2 and isinstance(msg.get("result"), dict):
+            for t in msg["result"].get("tools", []):
+                if isinstance(t, dict) and t.get("name"):
+                    tools.append(t["name"])
+    if tools:
+        return True, tools
+    err = (p.stderr or "").strip().splitlines()
+    return False, (err[-1] if err else "no tools listed")[:300]
+
+
+def ensure_mcp(repo):
+    """Check PHP MCP servers. Returns (status, servers dict).
+
+    Never installs or clones. Statuses per server: READY (found +
+    handshake lists expected tools), DEGRADED (found but broken, or
+    php missing), MISSING (hint with clone/download command), SKIP
+    (laravel-boost on non-Laravel projects).
+    """
+    servers = {}
+    php = shutil.which("php")
+    for name, spec in MCP_SERVERS.items():
+        entry = find_mcp_entry(repo, spec)
+        if entry is None:
+            if spec.get("phar"):
+                hint = ("download %s from %s/releases to %s"
+                        % (spec["phar"], spec["repo"],
+                           os.path.join(guided_mcp_home(), spec["phar"])))
+            else:
+                hint = ("git clone %s %s"
+                        % (spec["repo"], os.path.join(guided_mcp_home(),
+                                                      spec["dirname"])))
+            servers[name] = {"status": "MISSING", "hint": hint}
+            continue
+        if not php:
+            servers[name] = {"status": "DEGRADED", "entry": entry,
+                             "hint": "php not on PATH"}
+            continue
+        ok, info = mcp_handshake(["php", entry])
+        if not ok:
+            servers[name] = {"status": "DEGRADED", "entry": entry,
+                             "hint": "handshake failed: %s" % info}
+            continue
+        missing = [t for t in spec["tools"] if t not in info]
+        if missing:
+            servers[name] = {"status": "DEGRADED", "entry": entry,
+                             "tools": info,
+                             "hint": "tools missing: %s"
+                                     % ",".join(missing)}
+        else:
+            servers[name] = {"status": "READY", "entry": entry,
+                             "tools": info}
+    comp = os.path.join(repo, "composer.json")
+    laravel = False
+    try:
+        with open(comp, encoding="utf-8") as f:
+            laravel = "laravel/framework" in f.read()
+    except OSError:
+        pass
+    if laravel and os.path.isfile(os.path.join(repo, "artisan")) \
+            and os.path.isdir(os.path.join(repo, "vendor", "laravel",
+                                           "boost")):
+        ok, info = mcp_handshake(["php", "artisan", "boost:mcp"],
+                                 cwd=repo, timeout=90)
+        servers["laravel-boost"] = {
+            "status": "READY" if ok else "DEGRADED",
+            "tools": info if ok else [],
+            "hint": None if ok else "handshake failed: %s" % info}
+    elif laravel:
+        servers["laravel-boost"] = {
+            "status": "MISSING",
+            "hint": "composer require laravel/boost --dev, then "
+                    "php artisan boost:install"}
+    else:
+        servers["laravel-boost"] = {"status": "SKIP",
+                                    "hint": "not a Laravel project"}
+    states = [s["status"] for s in servers.values()
+              if s["status"] != "SKIP"]
+    if states and all(s == "READY" for s in states):
+        return "READY", servers
+    if any(s == "READY" for s in states):
+        return "PARTIAL", servers
+    return "MISSING", servers
+
+
+def print_mcp_snippet(platform, repo):
+    """Emit a ready-to-paste client block with resolved absolute paths."""
+    home = guided_mcp_home().replace("\\", "/")
+    laravel_artisan = os.path.join(os.path.abspath(repo), "artisan")
+    artisan = (laravel_artisan.replace("\\", "/")
+               if os.path.isfile(laravel_artisan) else "<LARAVEL_PROJECT>/artisan")
+    blocks = {
+        "phpstan": (["php", home + "/mcp-phpstan-server/bin/mcp-phpstan"], {}),
+        "phpcs": (["php", home + "/mcp-phpcs-server/bin/mcp-phpcs"], {}),
+        "php-composer": (["php", home + "/php-composer-mcp.phar"], {}),
+        "laravel-boost": (["php", artisan, "boost:mcp"], {}),
+    }
+    if platform == "opencode":
+        out = {"mcp": {}}
+        for name, (cmd, _) in blocks.items():
+            out["mcp"][name] = {"type": "local", "command": cmd,
+                                "enabled": False}
+        print(json.dumps(out, indent=2))
+    elif platform in ("kiro", "grok"):
+        out = {"mcpServers": {}}
+        for name, (cmd, _) in blocks.items():
+            entry = {"command": cmd[0], "args": cmd[1:]}
+            if platform == "kiro":
+                entry["disabled"] = True
+            out["mcpServers"][name] = entry
+        print(json.dumps(out, indent=2))
+    elif platform == "zed":
+        out = {"context_servers": {}}
+        for name, (cmd, _) in blocks.items():
+            out["context_servers"][name] = {"command": cmd[0],
+                                            "args": cmd[1:]}
+        print(json.dumps(out, indent=2))
+    else:
+        print("unknown platform: %s (opencode|kiro|zed|grok)" % platform)
+        return 1
+    return 0
+
+
+def cmd_mcp(args):
+    repo, snippet = ".", None
+    i = 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            repo, i = args[i + 1], i + 2
+        elif args[i] == "--print-snippet" and i + 1 < len(args):
+            snippet, i = args[i + 1], i + 2
+        else:
+            i += 1
+    if snippet:
+        return print_mcp_snippet(snippet, repo)
+    repo = os.path.abspath(repo)
+    sha = git_sha(repo)
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    status, servers = ensure_mcp(repo)
+    for name, s in servers.items():
+        st = s["status"]
+        if st == "READY":
+            print("[READY] %s -> tools: %s"
+                  % (name, ",".join(s["tools"])))
+        elif st == "SKIP":
+            print("[SKIP] %s -> %s" % (name, s["hint"]))
+        else:
+            print("[%s] %s -> %s" % (st, name, s["hint"]))
+    receipt = {"tool": "guided-run mcp", "run_id": run_id,
+               "sha": sha, "repo": repo, "status": status,
+               "servers": servers}
+    rdir = os.path.join(repo, "guided-receipts", run_id)
+    os.makedirs(rdir, exist_ok=True)
+    rpath = os.path.join(rdir, "mcp.json")
+    with open(rpath, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2)
+    print("MCP: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
+    return 0
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__.strip())
@@ -1227,11 +1539,15 @@ def main():
         return cmd_growth(rest)
     if cmd == "php-audit":
         return cmd_php_audit(rest)
+    if cmd == "orchestrator":
+        return cmd_orchestrator(rest)
+    if cmd == "mcp":
+        return cmd_mcp(rest)
     if cmd == "init":
         return cmd_init(rest)
     print("unknown command: %s "
-          "(validate-plan|verify|react-doctor|growth|php-audit|init)"
-          % cmd)
+          "(validate-plan|verify|react-doctor|growth|php-audit|"
+          "orchestrator|mcp|init)" % cmd)
     return 1
 
 

@@ -160,6 +160,7 @@ Skills are the agent contract; `scripts/guided_run.py` (stdlib-only, installed t
 | `react-doctor [--repo DIR] [--scope S] [--blocking LVL]` | React-only audit lane: detects React, provisions the pinned react-doctor (auto-download on first use), scans as JSON. PASS/SKIP = 0, blocking findings = 1 |
 | `growth [--repo DIR] [--no-memory]` | Advisory infra + architecture growth scan (compose/Dockerfile gaps, Cloudflare, DB, queue, cache, storage, auth, observability, secret hygiene, layer signals). Writes `growth.json` + refreshes repo-map `infrastructure`/`growth`. Always exit 0 |
 | `php-audit [--repo DIR] [--scope full\|changed] [--blocking LVL]` | PHP audit lane: runs project-installed auditors only (phpstan JSON, pint --test, composer audit JSON, rector dry-run, deptrac JSON, psalm taint, warden JSON). Never installs anything. PASS/SKIP = 0, blocking findings = 1 |
+| `orchestrator [--repo DIR]` | External-supervision check: detects the Agent Orchestrator (`ao`) CLI + git worktree readiness. Never installs or clones. Always exit 0 |
 | `init [--repo DIR]` | Scaffolds `docs/repo-map.json` from detected project facts |
 
 ```powershell

@@ -1,0 +1,22 @@
+// Guided PHP MCPs for Zed — paste into Settings → Open Settings File.
+// Absent = disabled; pasted = enabled (one paste to activate).
+// Replace <GUIDED_MCP> with your absolute ~/.guided/mcp path,
+// e.g. "C:/Users/you/.guided/mcp" (forward slashes work on Windows).
+"context_servers": {
+  "phpstan": {
+    "command": "php",
+    "args": ["<GUIDED_MCP>/mcp-phpstan-server/bin/mcp-phpstan"]
+  },
+  "phpcs": {
+    "command": "php",
+    "args": ["<GUIDED_MCP>/mcp-phpcs-server/bin/mcp-phpcs"]
+  },
+  "php-composer": {
+    "command": "php",
+    "args": ["<GUIDED_MCP>/php-composer-mcp.phar"]
+  },
+  "laravel-boost": {
+    "command": "php",
+    "args": ["<LARAVEL_PROJECT>/artisan", "boost:mcp"]
+  }
+}

@@ -65,6 +65,13 @@ if [[ -d "$ROOT/scripts" ]]; then
   echo ""
 fi
 
+if [[ -d "$ROOT/mcp" ]]; then
+  mkdir -p "$HOME/.guided/mcp"
+  cp -R "$ROOT/mcp"/* "$HOME/.guided/mcp/"
+  echo "OK  MCP refs -> $HOME/.guided/mcp (snippets disabled-by-default; paste to enable)"
+  echo ""
+fi
+
 case "$TARGET" in
   kiro) install_kiro ;;
   grok) install_grok ;;

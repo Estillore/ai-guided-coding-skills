@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "phpstan": {
+      "command": "php",
+      "args": ["<GUIDED_MCP>/mcp-phpstan-server/bin/mcp-phpstan"]
+    },
+    "phpcs": {
+      "command": "php",
+      "args": ["<GUIDED_MCP>/mcp-phpcs-server/bin/mcp-phpcs"]
+    },
+    "php-composer": {
+      "command": "php",
+      "args": ["<GUIDED_MCP>/php-composer-mcp.phar"]
+    },
+    "laravel-boost": {
+      "command": "php",
+      "args": ["<LARAVEL_PROJECT>/artisan", "boost:mcp"]
+    }
+  }
+}
