@@ -19,13 +19,14 @@ AI edits your repo directly, runs checks, and auto-fixes (max 3 loops) — fully
 |------|---------------------|--------------------|
 | **Kiro** | Skills + guided agent + Ponytail steering | `~/.kiro/skills` |
 | **Grok** | Skills | `~/.grok/skills` |
-| **OpenCode** | Skills | `~/.config/opencode/skills` |
+| **OpenCode** | Skills + guided agents | `~/.config/opencode/skills` |
 | **Zed** | Skills (Agent Skills standard) | `~/.agents/skills` |
 
 Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders work across these tools.
 
-> **Kiro-only extras:** `agents/*.json` (orchestrator + planner/builder/reviewer) and `steering/ponytail.md`  
-> OpenCode, Grok, and Zed load coaching rules from each skill’s `SKILL.md`.
+> **Kiro extras:** `agents/*.json` (orchestrator + planner/builder/reviewer) and `steering/ponytail.md`  
+> **OpenCode extras:** `agents/opencode/*.md` — 5 primary agents (coding, refactoring, review, verify, plan), per-phase permissions, no auto-chaining  
+> Grok and Zed load coaching rules from each skill’s `SKILL.md`.
 
 ---
 
@@ -171,6 +172,7 @@ python ~/.guided/scripts/guided_run.py verify --repo . --plan plan.json
 
 ## What’s new (vNext)
 
+- **Native OpenCode agents** — `agents/opencode/` ships 5 primary agents (coding, refactoring, review, verify, plan): thin wrappers over the skills with per-phase permissions (plan is read-only) and no auto-chaining
 - **OpenCode + Zed skill text** — `guided-coding`, `guided-plan`, `guided-review`, and `guided-verify` now include native OpenCode and Zed support (install paths, agents, project memory)
 - **DeepSeek Harness as the Heart** — folded into those four skills (no separate skill). Harness explores and verifies; the guided skill stays the ownership layer and is never the final source of truth
 - **Large Codebase Mode** — map the relevant slice only and default blast radius to 1–3 files
@@ -211,6 +213,7 @@ Install always copies from the `skills/` folder (canonical source).
 | **Kiro** steering | `%USERPROFILE%\.kiro\steering` | `~/.kiro/steering` |
 | **Grok** | `%USERPROFILE%\.grok\skills` | `~/.grok/skills` |
 | **OpenCode** | `%USERPROFILE%\.config\opencode\skills` | `~/.config/opencode/skills` |
+| **OpenCode** agents | `%USERPROFILE%\.config\opencode\agent` | `~/.config/opencode/agent` |
 | **Zed** | `%USERPROFILE%\.agents\skills` | `~/.agents/skills` |
 
 These folders do not conflict — you can install every tool on the same machine.
@@ -366,6 +369,7 @@ install.ps1             ← Windows installer (all tools)
 install.sh              ← macOS / Linux installer (all tools)
 skills/                 ← install from here (all guided skills)
 agents/guided*.json     ← Kiro agents: orchestrator + planner/builder/reviewer
+agents/opencode/*.md    ← OpenCode agents: coding / refactoring / review / verify / plan
 steering/ponytail.md    ← Kiro always-on style
 guided-*/               ← core workflow skills (same content as skills/)
 backup-old/             ← previous snapshot (reference only)

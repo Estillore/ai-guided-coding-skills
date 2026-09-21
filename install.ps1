@@ -57,7 +57,14 @@ function Install-OpenCode {
     # Native OpenCode global path (Windows uses ~/.config/opencode)
     $dest = Join-Path $HOME ".config\opencode\skills"
     Copy-SkillsTo $dest
+    $srcAgents = Join-Path $Root "agents\opencode"
+    $destAgents = Join-Path $HOME ".config\opencode\agent"
+    if (Test-Path $srcAgents) {
+        New-Item -ItemType Directory -Force -Path $destAgents | Out-Null
+        Copy-Item -Path (Join-Path $srcAgents "*.md") -Destination $destAgents -Force
+    }
     Write-Host "OK  OpenCode -> $dest"
+    Write-Host "    agents   -> $destAgents\guided-*.md"
 }
 
 function Install-Zed {
