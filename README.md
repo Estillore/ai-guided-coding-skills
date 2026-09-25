@@ -11,6 +11,10 @@ Works with **Kiro**, **Grok**, **OpenCode**, and **Zed** on **Windows** and **ma
 
 AI edits your repo directly, runs checks, and auto-fixes (max 3 loops) — fully autonomous.
 
+## Guided Buddy: learning mode
+
+Use `guided-buddy` when you want to learn rather than delegate the whole task. It starts in Recall or Coach, makes the learning path visible, and permits AI edits only after an explicit Pair or Delegate contract. It never auto-chains to the automation loop.
+
 ---
 
 ## Supported tools
@@ -25,7 +29,7 @@ AI edits your repo directly, runs checks, and auto-fixes (max 3 loops) — fully
 Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders work across these tools.
 
 > **Kiro extras:** `agents/*.json` (orchestrator + planner/builder/reviewer) and `steering/ponytail.md`  
-> **OpenCode extras:** `agents/opencode/*.md` — 5 primary agents (coding, refactoring, review, verify, plan), per-phase permissions, no auto-chaining  
+> **OpenCode extras:** `agents/opencode/*.md` — 6 primary agents (coding, refactoring, review, verify, plan, guided-buddy), per-phase permissions, no auto-chaining
 > Grok and Zed load coaching rules from each skill’s `SKILL.md`.
 
 ## Optional LSP retrieval
@@ -221,11 +225,11 @@ python ~/.guided/scripts/guided_run.py verify --repo . --plan plan.json
 
 ## What’s new (vNext)
 
-- **Native OpenCode agents** — `agents/opencode/` ships 5 primary agents (coding, refactoring, review, verify, plan): thin wrappers over the skills with per-phase permissions (plan is read-only) and no auto-chaining
-- **OpenCode + Zed skill text** — `guided-coding`, `guided-plan`, `guided-review`, and `guided-verify` now include native OpenCode and Zed support (install paths, agents, project memory)
-- **DeepSeek Harness as the Heart** — folded into those four skills (no separate skill). Harness explores and verifies; the guided skill stays the ownership layer and is never the final source of truth
+- **Native OpenCode agents** — `agents/opencode/` ships 6 primary agents (coding, refactoring, review, verify, plan, guided-buddy): thin wrappers over the skills with per-phase permissions (plan is read-only) and no auto-chaining
+- **OpenCode + Zed skill text** — `guided-coding`, `guided-plan`, `guided-review`, `guided-verify`, and `guided-buddy` include native OpenCode and Zed support (install paths, agents, project memory)
+- **DeepSeek Harness as the Heart** — folded into the workflow skills (no separate skill). Harness explores and verifies; the guided skill stays the ownership layer and is never the final source of truth
 - **Large Codebase Mode** — map the relevant slice only and default blast radius to 1–3 files
-- **Hard coaching ownership** — mandatory refusal to edit files; you type every production change
+- **Guided ownership modes** — normal guided skills keep the human as production author; `guided-buddy` adds explicit bounded Pair/Delegate edits after a contract
 - **Human Design Support** — AI implements *your* design, not a different architecture
 - **Active Confirmation Gate** — short “why does this matter?” checks on security, auth, and DB rules
 - **Database invariants** — constraints shown as real migrations/DDL, not only app checks
@@ -239,6 +243,7 @@ python ~/.guided/scripts/guided_run.py verify --repo . --plan plan.json
 | Skill | Role |
 |-------|------|
 | `guided-docs` | Mental model and key things to remember |
+| `guided-buddy` | AI-assisted apprenticeship with bounded Pair/Delegate edits |
 | `guided-plan` | Short or full testable plan |
 | `guided-planner` | Deeper planner companion |
 | `guided-coding` | Implementation + strong TDD |
@@ -418,7 +423,7 @@ install.ps1             ← Windows installer (all tools)
 install.sh              ← macOS / Linux installer (all tools)
 skills/                 ← canonical source installed by the installers
 agents/guided*.json     ← Kiro agents: orchestrator + planner/builder/reviewer
-agents/opencode/*.md    ← OpenCode agents: coding / refactoring / review / verify / plan
+agents/opencode/*.md    ← OpenCode agents: coding / refactoring / review / verify / plan / guided-buddy
 steering/ponytail.md    ← Kiro always-on style
 guided-*/               ← legacy mirrors; installers do not read them
 backup-old/             ← previous snapshot (reference only)
