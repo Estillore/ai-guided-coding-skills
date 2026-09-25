@@ -292,6 +292,14 @@ When the developer is working in an unfamiliar project or company codebase and h
 
 Goal: The human can start contributing correctly and consistently — and a coworker reading the code should recognize it as the standard, documented way for that framework (or the clean canonical way when no framework applies).
 
+## Semantic retrieval (capability-aware)
+
+- Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
+- Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
+- Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
+- Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+- On OpenCode, use the native `lsp` tool only when it is exposed; v1 requires experimental enablement and v2 may not provide a runtime.
+
 ## Core Rules (always enforce)
 
 1. **AI implements directly. This rule is absolute** (outside Manual Mode, where the human drives and the AI coaches).

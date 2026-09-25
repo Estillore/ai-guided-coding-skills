@@ -28,6 +28,54 @@ Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders wo
 > **OpenCode extras:** `agents/opencode/*.md` — 5 primary agents (coding, refactoring, review, verify, plan), per-phase permissions, no auto-chaining  
 > Grok and Zed load coaching rules from each skill’s `SKILL.md`.
 
+## Optional LSP retrieval
+
+The guided skills prefer a host-provided LSP or equivalent semantic tool when one is available. They use it for symbol discovery, definitions, references, implementations, hover, and call hierarchy, then read only the returned ranges. They fall back to `glob`/`grep` and ranged `read` for strings, configuration, generated files, and unsupported languages.
+
+### OpenCode v1
+
+OpenCode v1 has an experimental native `lsp` tool. Enable it in the OpenCode config:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": true,
+  "permission": {
+    "lsp": "allow"
+  }
+}
+```
+
+Start OpenCode with `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` (or `OPENCODE_EXPERIMENTAL=true`) in the environment. The tool supports read-only operations including `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `goToImplementation`, and call hierarchy. It needs a known file and position; use lexical search or document symbols to find the initial location.
+
+Check host prerequisites without changing config:
+
+```powershell
+# Report CLI/flag prerequisites only
+python ~/.guided/scripts/guided_run.py lsp --repo .
+
+# Probe a real semantic symbol response
+python ~/.guided/scripts/guided_run.py lsp --repo . --query your_symbol
+
+# Print the OpenCode v1 config fragment
+python ~/.guided/scripts/guided_run.py lsp --print-snippet opencode
+```
+
+Without `--query`, the command checks only the CLI and experimental flag. With `--query`, it invokes OpenCode's LSP symbol probe and reports `READY` only when symbols are returned. It never reads secrets or edits config.
+
+For an opt-in live smoke test after configuring a language server:
+
+```powershell
+$env:GUIDED_LSP_E2E = "1"
+$env:GUIDED_LSP_QUERY = "your_symbol"
+$env:GUIDED_LSP_REPO = "."
+python -m unittest tests.test_semantic_retrieval_contract.SemanticRetrievalContractTest.test_live_opencode_lsp_symbol_lookup -v
+```
+
+OpenCode v2 currently preserves `lsp` configuration but does not provide an active LSP runtime or tool. Other hosts may expose LSP through their own editor or MCP integration. The skills detect the available capability and never claim semantic retrieval when it is unavailable.
+
+Language servers execute project tooling with access to the workspace. Enable only trusted, project-compatible servers; the guided family does not auto-install them. Never share raw `opencode debug config` output; it may contain provider credentials.
+
 ---
 
 ## Quick start (Windows + Mac)
@@ -162,6 +210,7 @@ Skills are the agent contract; `scripts/guided_run.py` (stdlib-only, installed t
 | `growth [--repo DIR] [--no-memory]` | Advisory infra + architecture growth scan (compose/Dockerfile gaps, Cloudflare, DB, queue, cache, storage, auth, observability, secret hygiene, layer signals). Writes `growth.json` + refreshes repo-map `infrastructure`/`growth`. Always exit 0 |
 | `php-audit [--repo DIR] [--scope full\|changed] [--blocking LVL]` | PHP audit lane: runs project-installed auditors only (phpstan JSON, pint --test, composer audit JSON, rector dry-run, deptrac JSON, psalm taint, warden JSON). Never installs anything. PASS/SKIP = 0, blocking findings = 1 |
 | `orchestrator [--repo DIR]` | External-supervision check: detects the Agent Orchestrator (`ao`) CLI + git worktree readiness. Never installs or clones. Always exit 0 |
+| `lsp [--repo DIR] [--query SYMBOL] [--print-snippet opencode]` | Reports OpenCode prerequisites, optionally probes a real LSP symbol response, or prints the OpenCode v1 semantic-tool config. Never reads secrets or edits config. Always exit 0 |
 | `init [--repo DIR]` | Scaffolds `docs/repo-map.json` from detected project facts |
 
 ```powershell
@@ -367,11 +416,11 @@ In chat / agent panel, look for skills like `/guided-coding` or ask the agent to
 ```
 install.ps1             ← Windows installer (all tools)
 install.sh              ← macOS / Linux installer (all tools)
-skills/                 ← install from here (all guided skills)
+skills/                 ← canonical source installed by the installers
 agents/guided*.json     ← Kiro agents: orchestrator + planner/builder/reviewer
 agents/opencode/*.md    ← OpenCode agents: coding / refactoring / review / verify / plan
 steering/ponytail.md    ← Kiro always-on style
-guided-*/               ← core workflow skills (same content as skills/)
+guided-*/               ← legacy mirrors; installers do not read them
 backup-old/             ← previous snapshot (reference only)
 README.md
 ```

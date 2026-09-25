@@ -66,6 +66,13 @@ Only record what will still be useful next week. Prune ruthlessly.
 
 After mapping a project, emit/update `docs/repo-map.json` (fallback: `.kiro/repo-map.json` or `.grok/repo-map.json`) matching `references/repo-map-schema.json`: framework + version, entry points, domains, dependency direction, structure style, conventions, gotchas, and the real test commands. Every later phase (plan, coding, review, verify) loads this file instead of re-discovering. Update it when the architecture changes.
 
+## Semantic retrieval (capability-aware)
+
+- Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
+- Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
+- Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
+- Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+
 ## Kiro IDE support
 
 Works in every Kiro environment via the Agent Skills standard. Install to `~/.kiro/skills/` (global) or `.kiro/skills/` (workspace). Type `/` to invoke.

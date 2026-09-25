@@ -43,6 +43,11 @@ Commands:
         over stdio, list its tools. Never installs or clones.
         --print-snippet emits a ready-to-paste client block with
         resolved paths. Writes a JSON receipt. Always exit 0.
+    lsp [--repo DIR] [--query SYMBOL] [--print-snippet PLATFORM]
+        Report whether the OpenCode CLI and experimental LSP-tool flag
+        are available, optionally probe a real symbol query, or print the
+        OpenCode v1 semantic-tool config. Never edits config. Writes a
+        JSON receipt. Always exit 0.
     init [--repo DIR]
         Scaffold docs/repo-map.json from detected project facts.
 
@@ -1524,6 +1529,126 @@ def cmd_mcp(args):
     return 0
 
 
+def print_lsp_snippet(platform):
+    """Emit the minimal OpenCode v1 config for semantic tool access."""
+    if platform != "opencode":
+        print("unknown platform: %s (opencode)" % platform)
+        return 1
+    print(json.dumps({
+        "$schema": "https://opencode.ai/config.json",
+        "lsp": True,
+        "permission": {"lsp": "allow"},
+    }, indent=2))
+    return 0
+
+
+def _env_truthy(name):
+    return os.environ.get(name, "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
+def _opencode_probe_command(opencode, query):
+    """Build a safe Windows launcher for npm's opencode.cmd wrapper."""
+    args = ["debug", "lsp", "symbols", query]
+    if os.name == "nt" and opencode.lower().endswith((".cmd", ".bat")):
+        if any(ch in query for ch in "&|<>^%!\"\r\n"):
+            return None, "probe query contains unsupported shell characters"
+        return [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c",
+                opencode, *args], None
+    if os.name == "nt" and opencode.lower().endswith(".ps1"):
+        return None, "PowerShell wrapper is not directly executable"
+    return [opencode, *args], None
+
+
+def _probe_lsp_symbols(opencode, repo, query):
+    """Probe OpenCode's LSP symbol command without exposing its raw output."""
+    command, error = _opencode_probe_command(opencode, query)
+    if error:
+        return False, error
+    try:
+        result = subprocess.run(
+            command, cwd=repo, capture_output=True, encoding="utf-8",
+            errors="replace", timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, "probe failed: %s" % exc
+    if result.returncode != 0:
+        return False, "probe failed with exit code %d" % result.returncode
+    try:
+        symbols = json.loads(result.stdout.strip() or "[]")
+    except ValueError:
+        return False, "probe returned invalid JSON"
+    if not isinstance(symbols, list):
+        return False, "probe returned an unexpected JSON shape"
+    if not symbols:
+        return False, "probe returned no symbols; check the language server and query"
+    return True, "probe returned %d symbol result(s)" % len(symbols)
+
+
+def lsp_readiness(repo, query=None):
+    """Report host prerequisites and optionally verify a live symbol query."""
+    opencode = shutil.which("opencode")
+    flags = [name for name in (
+        "OPENCODE_EXPERIMENTAL_LSP_TOOL", "OPENCODE_EXPERIMENTAL",
+    ) if _env_truthy(name)]
+    if not opencode:
+        return "MISSING", {
+            "opencode": None,
+            "experimental_flags": flags,
+            "hint": "install OpenCode, then rerun this command",
+        }
+    if not flags:
+        return "DEGRADED", {
+            "opencode": opencode,
+            "experimental_flags": flags,
+            "hint": "set OPENCODE_EXPERIMENTAL_LSP_TOOL=true for OpenCode v1",
+        }
+    if not query:
+        return "DEGRADED", {
+            "opencode": opencode,
+            "experimental_flags": flags,
+            "hint": "pass --query SYMBOL to verify a live language-server response",
+        }
+    ok, detail = _probe_lsp_symbols(opencode, repo, query)
+    return ("READY" if ok else "DEGRADED"), {
+        "opencode": opencode,
+        "experimental_flags": flags,
+        "hint": detail,
+    }
+
+
+def cmd_lsp(args):
+    repo, snippet, query = ".", None, None
+    i = 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            repo, i = args[i + 1], i + 2
+        elif args[i] == "--query" and i + 1 < len(args):
+            query, i = args[i + 1], i + 2
+        elif args[i] == "--print-snippet" and i + 1 < len(args):
+            snippet, i = args[i + 1], i + 2
+        else:
+            i += 1
+    if snippet:
+        return print_lsp_snippet(snippet)
+    repo = os.path.abspath(repo)
+    sha = git_sha(repo)
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    status, detail = lsp_readiness(repo, query)
+    print("[%s] lsp -> %s" % (status, detail["hint"]))
+    receipt = {"tool": "guided-run lsp", "run_id": run_id,
+               "sha": sha, "repo": repo, "status": status,
+               "details": detail}
+    rdir = os.path.join(repo, "guided-receipts", run_id)
+    os.makedirs(rdir, exist_ok=True)
+    rpath = os.path.join(rdir, "lsp.json")
+    with open(rpath, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2)
+    print("LSP: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
+    return 0
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__.strip())
@@ -1543,11 +1668,13 @@ def main():
         return cmd_orchestrator(rest)
     if cmd == "mcp":
         return cmd_mcp(rest)
+    if cmd == "lsp":
+        return cmd_lsp(rest)
     if cmd == "init":
         return cmd_init(rest)
     print("unknown command: %s "
           "(validate-plan|verify|react-doctor|growth|php-audit|"
-          "orchestrator|mcp|init)" % cmd)
+          "orchestrator|mcp|lsp|init)" % cmd)
     return 1
 
 

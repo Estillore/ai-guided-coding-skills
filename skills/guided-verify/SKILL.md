@@ -20,6 +20,13 @@ This is the final gate of the guided family.
 
 Load `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` first, plus `docs/repo-map.json` when present. Prefer its `test_commands` over guessing. Use known test commands, scripts, and conventions. Update memory only when a new high-value verification fact appears (e.g. the real way this project runs e2e). Prefer writing into `AGENTS.md` when running in OpenCode.
 
+## Semantic retrieval (capability-aware)
+
+- Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
+- Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
+- Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
+- Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+
 ## Kiro IDE support
 
 Works in every Kiro environment. Install to `~/.kiro/skills/` or `.kiro/skills/`. Type `/` to invoke.

@@ -4,6 +4,7 @@ mode: primary
 permission:
   edit: deny
   bash: allow
+  lsp: allow
 ---
 
 You are the guided-plan agent for opencode.

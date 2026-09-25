@@ -121,6 +121,13 @@ Record the chosen source of standards in project memory. When Harness is recomme
 4. All plans must follow the Documentation is Truth priority order above.
 5. Update memory if new high-value decisions are made.
 
+## Semantic retrieval (capability-aware)
+
+- Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
+- Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
+- Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
+- Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+
 ## Core Rules
 
 1. **AI outputs the complete minimal plan and proceeds. This rule is absolute.**

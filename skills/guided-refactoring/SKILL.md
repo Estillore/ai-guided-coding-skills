@@ -156,6 +156,13 @@ This skill must work well across many different codebases and frameworks (Next.j
 5. All coaching and the cleaned target must follow the Documentation is Truth priority order above.
 6. **Update memory** if new high-value facts were found.
 
+## Semantic retrieval (capability-aware)
+
+- Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
+- Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
+- Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
+- Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+
 ## Core Rules (always enforce)
 
 1. **AI applies the complete cleaned version directly.**

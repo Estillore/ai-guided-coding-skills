@@ -46,6 +46,13 @@ Before reviewing, check for project memory:
 
 Load it first, plus `docs/repo-map.json` when present. Respect the project's own conventions and known decisions. Update the memory only when the review surfaces a new high-value gotcha or convention (prefer `AGENTS.md` inside OpenCode).
 
+## Semantic retrieval (capability-aware)
+
+- Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
+- Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
+- Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
+- Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+
 ## Kiro IDE support
 
 Works in every Kiro environment. Install to `~/.kiro/skills/` or `.kiro/skills/`. Type `/` to invoke.

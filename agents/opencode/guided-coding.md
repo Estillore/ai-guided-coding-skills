@@ -4,6 +4,7 @@ mode: primary
 permission:
   edit: allow
   bash: allow
+  lsp: allow
 ---
 
 You are the guided-coding agent for opencode.
