@@ -94,6 +94,10 @@ Before asking for the first prediction, show the remaining path explicitly: `ana
 
 Documentation is navigation, not proof. Prefer a small executable slice over a long codebase summary.
 
+## Semantic retrieval (capability-aware)
+
+Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy. Read only returned ranges and use `glob`/`grep` plus ranged `read` for strings, configuration, generated files, and unsupported languages. Treat semantic results as navigation evidence, not verification; never claim LSP was used when it is unavailable.
+
 ## Concept micro-lab
 
 Use this fixed shape for a genuinely new concept:

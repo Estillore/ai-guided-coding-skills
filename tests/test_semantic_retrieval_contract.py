@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = (
     "guided-docs",
+    "guided-buddy",
     "guided-plan",
     "guided-coding",
     "guided-refactoring",
@@ -26,6 +27,7 @@ OPENCODE_AGENTS = (
     "guided-refactoring.md",
     "guided-review.md",
     "guided-verify.md",
+    "guided-buddy.md",
 )
 
 

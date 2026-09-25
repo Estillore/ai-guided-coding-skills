@@ -5,6 +5,7 @@ mode: primary
 permission:
   edit: ask
   bash: ask
+  lsp: allow
   webfetch: ask
   websearch: ask
   task: deny
