@@ -1810,13 +1810,13 @@ OXLINT_STARTER_CONFIG = """{
 }
 """
 
-# Where a sweep looks for projects when the user names no roots. Home-relative
-# dev folders only: a whole-drive scan is slow and would walk other people's
-# checkouts. --roots overrides this.
-DEFAULT_SCAN_DIRS = ("Desktop", "Documents", "Documents/GitHub",
-                     "Documents/Projects", "Documents/repos", "Documents/dev",
-                     "Projects", "projects", "code", "src", "repos",
-                     "dev", "workspace", "Workspaces")
+# Where a sweep looks for projects when the user names no roots. Dev folders
+# only, and deliberately NOT a bare $HOME/Documents: a stray package.json in
+# an unzipped tarball or a notes folder would otherwise make the sweep write
+# a config into a tree the user never named. --roots is the precise option.
+DEFAULT_SCAN_DIRS = ("Desktop", "Documents/GitHub", "Documents/Projects",
+                     "Documents/repos", "Documents/dev", "Projects",
+                     "projects", "repos", "workspace", "Workspaces")
 
 
 def init_oxlint_config(repo, enabled=True):
@@ -1833,6 +1833,11 @@ def init_oxlint_config(repo, enabled=True):
     """
     if not enabled:
         return False, None, "skipped (--no-init-config)"
+    if not has_js_sources(repo):
+        # Never leave a config for a linter that cannot run here. A sweep
+        # matches on composer.json, so without this every pure-PHP repo on
+        # the machine would collect a file it will never use.
+        return False, None, "no JS assets in this project"
     if find_oxlint_config(repo):
         return False, None, "existing config left untouched"
     path = os.path.join(repo, ".oxlintrc.json")
@@ -1923,8 +1928,12 @@ def cmd_js_lint(args):
         print("[INFO] config -> not created (--no-init-config)")
 
     ready, reason, version = ensure_oxlint(repo)
-    results.append({"step": "ensure", "rc": 0 if ready else 1, "out": reason})
-    print("[%s] ensure -> %s" % ("PASS" if ready else "SKIP", reason))
+    # reason can carry repo-controlled path text and captured tool stderr, so
+    # it gets the same single-line treatment as every other printed field.
+    results.append({"step": "ensure", "rc": 0 if ready else 1,
+                    "out": _one_line(reason, 300)})
+    print("[%s] ensure -> %s" % ("PASS" if ready else "SKIP",
+                                 _one_line(reason, 300)))
 
     if ready:
         step = step_oxlint(repo, scope)
@@ -1988,11 +1997,20 @@ def cmd_js_lint(args):
                "oxlint_configs": cfgs, "inline_js_coverage": coverage,
                "results": results}
     rdir = receipts or os.path.join(repo, "guided-receipts", run_id)
-    os.makedirs(rdir, exist_ok=True)
-    rpath = os.path.join(rdir, "js-lint.json")
-    with open(rpath, "w", encoding="utf-8") as f:
-        json.dump(receipt, f, indent=2)
-    print("JS-LINT: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
+    try:
+        os.makedirs(rdir, exist_ok=True)
+        rpath = os.path.join(rdir, "js-lint.json")
+        with open(rpath, "w", encoding="utf-8") as f:
+            json.dump(receipt, f, indent=2)
+    except OSError as e:
+        # A read-only repo must not turn a green scan into a crash. The scan
+        # result is still printed; only the persisted evidence is lost, and
+        # that is stated rather than swallowed.
+        print("[WARN] receipt -> could not write %s: %s"
+              % (_one_line(rdir, 160), _one_line(e, 120)))
+        rpath = None
+    print("JS-LINT: %s (sha %s)%s"
+          % (status, sha, "\nreceipt: %s" % rpath if rpath else ""))
     return 0 if status in ("PASS", "SKIP") else 1
 
 
@@ -2006,7 +2024,9 @@ def cmd_js_lint_all(args):
     you are not sure where the projects live.
     """
     roots_arg, scope, blocking, receipts = None, "full", "error", None
-    discover_only = "--all" not in args
+    # --discover wins over --all. Asking "what would you scan?" and getting
+    # writes is the worst possible answer to a preview.
+    discover_only = "--discover" in args or "--all" not in args
     i = 0
     while i < len(args):
         if args[i] == "--repo" and i + 1 < len(args):
@@ -2029,8 +2049,18 @@ def cmd_js_lint_all(args):
               "(error|warning|none)" % blocking)
         return 1
 
+    explicit_roots = bool(roots_arg)
     if roots_arg:
-        roots = [r.strip() for r in roots_arg.split(",") if r.strip()]
+        roots = [os.path.abspath(os.path.expanduser(r.strip()))
+                 for r in roots_arg.split(",") if r.strip()]
+        missing = [r for r in roots if not os.path.isdir(r)]
+        if missing:
+            # A gate that scanned nothing must not report green. A typo in
+            # --roots and a genuinely empty tree look identical downstream,
+            # so the typo has to fail here.
+            print("JS-LINT-ALL: FAIL\n- --roots is not a directory: %s"
+                  % _one_line(", ".join(missing), 300))
+            return 1
     else:
         roots = default_scan_roots()
         if not roots:
@@ -2055,14 +2085,20 @@ def cmd_js_lint_all(args):
     run_id = _run_id()
     summary = []
     for p in projects:
-        # Each project gets its own receipt, written into that repo, because
-        # that is where an agent working on it will look for the evidence.
+        # Each project keeps its own receipt under its own repo, by default.
+        # Forwarding one --receipts dir here would make every project write
+        # the same js-lint.json, and all but the last would be destroyed
+        # while the printed summary still claimed N projects scanned.
         sub = ["--repo", p, "--scope", scope, "--blocking", blocking]
-        if receipts:
-            sub += ["--receipts", receipts]
         if "--no-init-config" in args:
             sub.append("--no-init-config")
-        rc = cmd_js_lint(sub)
+        try:
+            rc = cmd_js_lint(sub)
+        except Exception as e:                    # noqa: BLE001
+            # One unreadable project must not abort the machine-wide run.
+            rc = 1
+            print("[ERROR] %s -> sweep aborted this project: %s"
+                  % (_one_line(p, 200), _one_line(e, 160)))
         summary.append({"project": p, "rc": rc})
         print("")
 
@@ -2078,15 +2114,29 @@ def cmd_js_lint_all(args):
                "roots": roots, "scanned": ran, "failing": len(failed),
                "projects": summary}
     # The summary describes EVERY project, so it does not belong inside any
-    # one of them. It lands next to wherever the command was invoked; an
-    # explicit --receipts still wins.
-    rdir = receipts or os.path.join(os.path.abspath("."), "guided-receipts",
-                                    run_id)
-    os.makedirs(rdir, exist_ok=True)
-    rpath = os.path.join(rdir, "js-lint-all.json")
-    with open(rpath, "w", encoding="utf-8") as f:
-        json.dump(receipt, f, indent=2)
-    print("summary receipt: %s" % rpath)
+    # one of them. Prefer an explicit --receipts; else a directory that is
+    # not itself a scanned project -- writing it into cwd would deposit an
+    # untracked file in a repo the user is standing in, where it can be swept
+    # into a commit and misread as that project's own evidence.
+    here = os.path.abspath(".")
+    inside = any(here == p or here.startswith(p + os.sep) for p in projects)
+    if receipts:
+        base = receipts
+    elif inside:
+        base = os.path.dirname(roots[0]) if roots else here
+    else:
+        base = here
+    try:
+        rdir = os.path.join(base, "guided-receipts", run_id)
+        os.makedirs(rdir, exist_ok=True)
+        rpath = os.path.join(rdir, "js-lint-all.json")
+        with open(rpath, "w", encoding="utf-8") as f:
+            json.dump(receipt, f, indent=2)
+    except OSError as e:
+        print("[WARN] summary receipt -> could not write: %s"
+              % _one_line(e, 120))
+        rpath = None
+    print("summary receipt: %s" % (rpath or "(not written)"))
     return 1 if failed else 0
 
 

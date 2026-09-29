@@ -436,6 +436,7 @@ class InitConfigTest(unittest.TestCase):
 
     def test_creates_config_when_absent(self):
         with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "app.js").write_text("var a = 1;", encoding="utf-8")
             created, path, note = gr.init_oxlint_config(tmp)
             self.assertTrue(created, note)
             self.assertTrue(os.path.isfile(path), path)
@@ -450,6 +451,7 @@ class InitConfigTest(unittest.TestCase):
             existing = Path(tmp, ".oxlintrc.json")
             original = '{"rules":{"no-alert":"error"}}'
             existing.write_text(original, encoding="utf-8")
+            Path(tmp, "app.js").write_text("var a = 1;", encoding="utf-8")
             created, path, note = gr.init_oxlint_config(tmp)
             self.assertFalse(created, note)
             self.assertIn("untouched", note)
@@ -458,6 +460,7 @@ class InitConfigTest(unittest.TestCase):
     def test_respects_a_jsonc_config(self):
         with tempfile.TemporaryDirectory() as tmp:
             Path(tmp, ".oxlintrc.jsonc").write_text("{}", encoding="utf-8")
+            Path(tmp, "app.js").write_text("var a = 1;", encoding="utf-8")
             created, _, note = gr.init_oxlint_config(tmp)
         self.assertFalse(created)
         self.assertIn("untouched", note)
@@ -473,9 +476,9 @@ class InitConfigTest(unittest.TestCase):
 
     def test_unwritable_repo_reports_and_does_not_raise(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch.object(gr, "find_oxlint_config", lambda r: []), \
-                    mock.patch("builtins.open",
-                               side_effect=PermissionError("denied")):
+            Path(tmp, "app.js").write_text("var a = 1;", encoding="utf-8")
+            with mock.patch("builtins.open",
+                            side_effect=PermissionError("denied")):
                 created, path, note = gr.init_oxlint_config(tmp)
         self.assertFalse(created)
         self.assertIsNone(path)
@@ -483,6 +486,7 @@ class InitConfigTest(unittest.TestCase):
 
     def test_written_config_is_valid_json(self):
         with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "app.js").write_text("var a = 1;", encoding="utf-8")
             _, path, _ = gr.init_oxlint_config(tmp)
             with open(path, encoding="utf-8") as f:
                 json.load(f)
@@ -550,8 +554,8 @@ class SweepTest(unittest.TestCase):
             rc = gr.cmd_js_lint_all(["--all", "--roots", tmp,
                                      "--receipts", tmp])
             self.assertEqual(rc, 0, "SKIP projects must not fail the sweep")
-            summary = json.loads(
-                (Path(tmp) / "js-lint-all.json").read_text(encoding="utf-8"))
+            summary_path = next(Path(tmp).glob("guided-receipts/*/js-lint-all.json"))
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
         self.assertEqual(summary["scanned"], 2, msg=summary)
         self.assertEqual(summary["failing"], 0, msg=summary)
 
@@ -562,3 +566,121 @@ class SweepTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class SweepRegressionTest(unittest.TestCase):
+    """One test per defect found in review. Each names the failure it stops."""
+
+    def _js_project(self, base, name):
+        d = Path(base, name)
+        d.mkdir(parents=True)
+        (d / "composer.json").write_text("{}", encoding="utf-8")
+        (d / "app.js").write_text("var a = 1;", encoding="utf-8")
+        return d
+
+    def test_per_project_receipts_do_not_collide(self):
+        """--receipts used to forward one dir to every project, so N-1
+        receipts were silently destroyed by the same constant filename."""
+        with tempfile.TemporaryDirectory() as tmp:
+            a = self._js_project(tmp, "a")
+            b = self._js_project(tmp, "b")
+            out = Path(tmp, "out")
+            out.mkdir()
+            gr.cmd_js_lint_all(["--all", "--roots", tmp, "--receipts",
+                                str(out)])
+            # Evidence must live in each project, not in one shared dir.
+            for proj in (a, b):
+                self.assertTrue(
+                    list(proj.glob("guided-receipts/*/js-lint.json")),
+                    msg="no per-project receipt in %s" % proj)
+
+    def test_discover_beats_all(self):
+        """`--all --discover` used to run the full sweep, writing configs
+        into every project, because discover_only was derived from --all."""
+        with tempfile.TemporaryDirectory() as tmp:
+            p = self._js_project(tmp, "a")
+            before = sorted(os.listdir(p))
+            rc = gr.cmd_js_lint_all(["--all", "--discover", "--roots", tmp])
+            after = sorted(os.listdir(p))
+        self.assertEqual(rc, 0)
+        self.assertEqual(before, after, msg="--discover must write nothing")
+        self.assertFalse(os.path.isfile(str(p / ".oxlintrc.json")))
+
+    def test_bad_explicit_root_fails_instead_of_passing(self):
+        """A typo in --roots used to scan nothing and exit 0: a gate that
+        scanned nothing must never report green."""
+        with tempfile.TemporaryDirectory() as tmp:
+            rc = gr.cmd_js_lint_all(
+                ["--all", "--roots", os.path.join(tmp, "Proejcts")])
+        self.assertEqual(rc, 1, msg="a nonexistent --roots must fail")
+
+    def test_empty_but_real_root_still_exits_zero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rc = gr.cmd_js_lint_all(["--all", "--roots", tmp])
+        self.assertEqual(rc, 0, msg="a real but empty root is not a failure")
+
+    def test_one_broken_project_does_not_abort_the_sweep(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._js_project(tmp, "a")
+            self._js_project(tmp, "boom")
+            with mock.patch.object(
+                    gr, "cmd_js_lint",
+                    side_effect=[0, RuntimeError("unreadable")]):
+                rc = gr.cmd_js_lint_all(["--all", "--roots", tmp,
+                                         "--receipts", tmp])
+            summary_path = next(
+                Path(tmp).glob("guided-receipts/*/js-lint-all.json"))
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        # Both projects are still scanned, and the broken one is recorded as a
+        # failure rather than aborting the machine-wide run.
+        self.assertEqual(summary["scanned"], 2, msg=summary)
+        self.assertEqual(summary["failing"], 1, msg=summary)
+        self.assertEqual(rc, 1, "the broken project must surface as a failure")
+
+    def test_summary_receipt_avoids_landing_in_a_scanned_project(self):
+        """Run from inside a project, the summary must not be deposited in
+        it. Uses a real chdir: os.path.abspath(".") on Windows resolves via
+        the Win32 API, so mocking os.getcwd does NOT change it and the test
+        would pass without ever reaching the branch."""
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            proj = self._js_project(tmp, "site")
+            try:
+                os.chdir(proj)
+                with mock.patch.object(gr, "cmd_js_lint", return_value=0):
+                    gr.cmd_js_lint_all(["--all", "--roots", tmp])
+            finally:
+                os.chdir(cwd)
+            leaked = list(proj.glob("guided-receipts/*/js-lint-all.json"))
+        self.assertEqual(leaked, [], msg=leaked)
+
+    def test_config_is_not_written_to_a_project_with_no_js(self):
+        """A sweep matches on composer.json, so a pure-PHP repo would collect
+        a config for a linter that can never run there."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp, "pure-php")
+            d.mkdir()
+            (d / "composer.json").write_text("{}", encoding="utf-8")
+            created, path, note = gr.init_oxlint_config(d)
+        self.assertFalse(created, note)
+        self.assertIn("no JS assets", note)
+
+    def test_ensure_reason_is_single_line(self):
+        """Repo-controlled path text reaches `reason`; unsanitised it could
+        forge the gate's own verdict line on stdout."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp, "a")
+            d.mkdir()
+            (d / "app.js").write_text("var a = 1;", encoding="utf-8")
+            (d / "oxlint.config.ts").write_text("x", encoding="utf-8")
+            with mock.patch.object(gr.shutil, "which", lambda n: "/x"), \
+                    mock.patch.object(gr, "node_version", lambda: (22, 12)), \
+                    stub_sh(0, "1.80.0"):
+                _, reason, _ = gr.ensure_oxlint(d)
+            self.assertNotIn("\n", reason)
+            self.assertNotIn("\r", reason)
+
+    def test_default_scan_dirs_exclude_bare_documents(self):
+        """A stray package.json under $HOME/Documents must not make the
+        sweep write into a tree the user never named."""
+        self.assertNotIn("Documents", gr.DEFAULT_SCAN_DIRS)
+        self.assertIn("Documents/GitHub", gr.DEFAULT_SCAN_DIRS)
