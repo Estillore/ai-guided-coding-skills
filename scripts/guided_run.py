@@ -33,16 +33,26 @@ Commands:
         receipt. Exit 0 on PASS or SKIP (not PHP / no php / no tools,
         with reason); 1 on FAIL (blocking-level findings).
     js-lint [--repo DIR] [--scope full|changed] [--blocking LVL]
+             [--no-init-config]
         JavaScript correctness lane: detect .js/.mjs/.cjs sources -> use the
         project's own oxlint if it has one, else the pinned binary via npx
         (auto-download on first use) -> scan --format=json. Never installs
         into the project, never runs --fix, and refuses the npx path when the
         repo ships a config oxlint would evaluate (oxlint.config.ts, or a
-        jsPlugins entry). Also measures how many inline <script> blocks in
-        .php files oxlint cannot see. Writes a JSON receipt. Exit 0 on PASS or
-        SKIP (no JS / no Node / below floor / offline / repo ships an
-        evaluable config, with reason); 1 on FAIL (blocking-level findings).
-        A scan that never ran reports SKIP, never PASS.
+        jsPlugins entry). Writes a starter .oxlintrc.json when the project has
+        none (never overwrites an existing one; --no-init-config disables).
+        Also measures how many inline <script> blocks in .php files oxlint
+        cannot see. Writes a JSON receipt. Exit 0 on PASS or SKIP (no JS / no
+        Node / below floor / offline / repo ships an evaluable config, with
+        reason); 1 on FAIL (blocking-level findings). A scan that never ran
+        reports SKIP, never PASS.
+    js-lint --all [--roots DIR[,DIR...]] [--discover] [same flags]
+        Sweep every project under the scan roots, so no repo has to be named
+        by hand. With no --roots, scans the usual home dev folders
+        (Desktop, Documents, Projects, code, repos, ...). --discover lists the
+        roots it would scan and writes nothing -- the safe first run. Writes a
+        per-project receipt plus one summary receipt; exits 1 if any project
+        fails.
     orchestrator [--repo DIR]
         External-supervision check: detect the Agent Orchestrator
         (`ao`) CLI + git worktree readiness. Never installs or
@@ -1787,6 +1797,94 @@ NO_OXLINT_CONFIG_HINT = (
     '"oxc"],"categories":{"correctness":"error","suspicious":"warn"}} '
     "- note that `plugins` REPLACES the defaults, so all four must be listed.")
 
+# Written to a project that has no oxlint config, so the gate does not have to
+# be pointed at a config by hand on every repo. `plugins` is spelled out in
+# full because that field REPLACES the default set: a config that omits them
+# would silently switch off most correctness rules, which is worse than no
+# config at all.
+OXLINT_STARTER_CONFIG = """{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "env": { "browser": true },
+  "plugins": ["eslint", "typescript", "unicorn", "oxc"],
+  "categories": { "correctness": "error", "suspicious": "warn" }
+}
+"""
+
+# Where a sweep looks for projects when the user names no roots. Home-relative
+# dev folders only: a whole-drive scan is slow and would walk other people's
+# checkouts. --roots overrides this.
+DEFAULT_SCAN_DIRS = ("Desktop", "Documents", "Documents/GitHub",
+                     "Documents/Projects", "Documents/repos", "Documents/dev",
+                     "Projects", "projects", "code", "src", "repos",
+                     "dev", "workspace", "Workspaces")
+
+
+def init_oxlint_config(repo, enabled=True):
+    """(created, path, note) -- create a starter config only when absent.
+
+    Three rules, all of them load-bearing:
+      * NEVER overwrite. An existing config is a decision someone made, and
+        silently replacing it would discard their rule choices and baselines.
+      * NEVER fail the run. A read-only checkout, a permissions error, a
+        full disk: report the note and let the scan proceed. A missing config
+        is a nuisance, not a gate failure.
+      * Write only this one file. No npm install, no lockfile, no node_modules.
+        oxlint itself still arrives through the pinned npx fallback.
+    """
+    if not enabled:
+        return False, None, "skipped (--no-init-config)"
+    if find_oxlint_config(repo):
+        return False, None, "existing config left untouched"
+    path = os.path.join(repo, ".oxlintrc.json")
+    try:
+        with open(path, "x", encoding="utf-8", newline="\n") as f:
+            f.write(OXLINT_STARTER_CONFIG)
+    except FileExistsError:
+        return False, None, "existing config left untouched"
+    except OSError as e:
+        return False, None, "could not write config: %s" % _one_line(e, 120)
+    return True, path, "created starter config"
+
+
+def discover_project_roots(roots, max_depth=4):
+    """Project roots under `roots`: a dir holding composer.json or
+    package.json. Sorted, deduped, and a nested project is not reported twice.
+
+    A root that is itself a project is returned as-is; descending further just
+    finds the same dir again, and a monorepo would otherwise report every
+    package as a separate project.
+    """
+    found = []
+    for base in roots:
+        base = os.path.abspath(base)
+        if not os.path.isdir(base):
+            continue
+        if _is_project_root(base):
+            found.append(base)
+            continue
+        base_depth = base.rstrip(os.sep).count(os.sep)
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs
+                       if d not in WALK_SKIP and d != "guided-receipts"]
+            if _is_project_root(root):
+                found.append(root)
+                dirs[:] = []          # do not double-report nested projects
+            elif root.rstrip(os.sep).count(os.sep) - base_depth >= max_depth:
+                dirs[:] = []
+    return sorted(set(found))
+
+
+def _is_project_root(path):
+    return (os.path.isfile(os.path.join(path, "composer.json"))
+            or os.path.isfile(os.path.join(path, "package.json")))
+
+
+def default_scan_roots():
+    """Existing home dev folders, in order. Empty list is not an error."""
+    home = os.path.expanduser("~")
+    return [os.path.join(home, *d.split("/")) for d in DEFAULT_SCAN_DIRS
+            if os.path.isdir(os.path.join(home, *d.split("/")))]
+
 
 def cmd_js_lint(args):
     repo, scope, blocking, receipts = ".", "full", "error", None
@@ -1814,8 +1912,16 @@ def cmd_js_lint(args):
     run_id = _run_id()
     results = []
     status = "SKIP"
+    init_config = "--no-init-config" not in args
 
     coverage = inline_script_audit(repo)
+    created, cfg_path, note = init_oxlint_config(repo, init_config)
+    if created:
+        print("[WRITE] config -> created %s (commit it so CI matches)"
+              % _one_line(os.path.relpath(cfg_path, repo)))
+    elif not init_config:
+        print("[INFO] config -> not created (--no-init-config)")
+
     ready, reason, version = ensure_oxlint(repo)
     results.append({"step": "ensure", "rc": 0 if ready else 1, "out": reason})
     print("[%s] ensure -> %s" % ("PASS" if ready else "SKIP", reason))
@@ -1850,12 +1956,15 @@ def cmd_js_lint(args):
                 status = "PASS"
 
     cfgs = find_oxlint_config(repo)
-    results.append({"step": "config", "rc": 0,
-                    "out": ("configs: %s" % _one_line(",".join(cfgs)))
-                           if cfgs else NO_OXLINT_CONFIG_HINT})
-    if not cfgs:
+    results.append({"step": "config", "rc": 0, "created": created,
+                    "out": ("created %s"
+                            % _one_line(os.path.relpath(cfg_path, repo)))
+                           if created else
+                           (("configs: %s" % _one_line(",".join(cfgs)))
+                            if cfgs else NO_OXLINT_CONFIG_HINT + " " + note)})
+    if not cfgs and not created:
         print("[WARN] config -> no oxlint config found; findings may be "
-              "false positives from no-undef (see receipt for the snippet)")
+              "false positives from no-undef (%s)" % _one_line(note, 100))
 
     if coverage["inline_script_blocks"]:
         print("[INFO] coverage -> %d inline <script> block(s) across %d .php "
@@ -1885,6 +1994,100 @@ def cmd_js_lint(args):
         json.dump(receipt, f, indent=2)
     print("JS-LINT: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
     return 0 if status in ("PASS", "SKIP") else 1
+
+
+def cmd_js_lint_all(args):
+    """Sweep every discovered project under the scan roots.
+
+    Exists so the gate can be run across a whole machine without naming a
+    single repo: `js-lint --all` with no --repo scans the usual home dev
+    folders, and `--roots a,b,c` overrides them. `--discover` previews the
+    roots and writes nothing, which is the safe first move on a machine where
+    you are not sure where the projects live.
+    """
+    roots_arg, scope, blocking, receipts = None, "full", "error", None
+    discover_only = "--all" not in args
+    i = 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            roots_arg, i = args[i + 1], i + 2
+        elif args[i] == "--roots" and i + 1 < len(args):
+            roots_arg, i = args[i + 1], i + 2
+        elif args[i] == "--scope" and i + 1 < len(args):
+            scope, i = args[i + 1], i + 2
+        elif args[i] == "--blocking" and i + 1 < len(args):
+            blocking, i = args[i + 1], i + 2
+        elif args[i] == "--receipts" and i + 1 < len(args):
+            receipts, i = args[i + 1], i + 2
+        else:
+            i += 1
+    if scope not in ("full", "changed"):
+        print("JS-LINT-ALL: FAIL\n- bad --scope: %s (full|changed)" % scope)
+        return 1
+    if blocking not in ("error", "warning", "none"):
+        print("JS-LINT-ALL: FAIL\n- bad --blocking: %s "
+              "(error|warning|none)" % blocking)
+        return 1
+
+    if roots_arg:
+        roots = [r.strip() for r in roots_arg.split(",") if r.strip()]
+    else:
+        roots = default_scan_roots()
+        if not roots:
+            print("JS-LINT-ALL: FAIL\n- no scan roots found. Pass "
+                  "--roots <dir>[,<dir>...] explicitly.")
+            return 1
+    print("[INFO] scanning: %s" % _one_line(", ".join(roots), 400))
+    projects = discover_project_roots(roots)
+
+    if discover_only:
+        print("[INFO] %d project root(s) found:" % len(projects))
+        for p in projects:
+            print("  %s" % _one_line(p, 300))
+        print("JS-LINT-ALL: DISCOVER (nothing written; re-run with --all)")
+        return 0
+
+    if not projects:
+        print("JS-LINT-ALL: SKIP (no composer.json / package.json under the "
+              "scan roots)")
+        return 0
+
+    run_id = _run_id()
+    summary = []
+    for p in projects:
+        # Each project gets its own receipt, written into that repo, because
+        # that is where an agent working on it will look for the evidence.
+        sub = ["--repo", p, "--scope", scope, "--blocking", blocking]
+        if receipts:
+            sub += ["--receipts", receipts]
+        if "--no-init-config" in args:
+            sub.append("--no-init-config")
+        rc = cmd_js_lint(sub)
+        summary.append({"project": p, "rc": rc})
+        print("")
+
+    failed = [s for s in summary if s["rc"] == 1]
+    ran = len(summary)
+    print("=" * 60)
+    print("JS-LINT-ALL SUMMARY: %d project(s) scanned, %d failing"
+          % (ran, len(failed)))
+    for s in summary:
+        mark = "FAIL" if s["rc"] == 1 else "ok"
+        print("  %-4s %s" % (mark, _one_line(s["project"], 200)))
+    receipt = {"tool": "guided-run js-lint --all", "run_id": run_id,
+               "roots": roots, "scanned": ran, "failing": len(failed),
+               "projects": summary}
+    # The summary describes EVERY project, so it does not belong inside any
+    # one of them. It lands next to wherever the command was invoked; an
+    # explicit --receipts still wins.
+    rdir = receipts or os.path.join(os.path.abspath("."), "guided-receipts",
+                                    run_id)
+    os.makedirs(rdir, exist_ok=True)
+    rpath = os.path.join(rdir, "js-lint-all.json")
+    with open(rpath, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2)
+    print("summary receipt: %s" % rpath)
+    return 1 if failed else 0
 
 
 AO_RELEASES = ("https://github.com/Untrivial-ai/agent-orchestrator"
@@ -2533,6 +2736,8 @@ def main():
     if cmd == "php-audit":
         return cmd_php_audit(rest)
     if cmd == "js-lint":
+        if "--all" in rest or "--discover" in rest or "--roots" in rest:
+            return cmd_js_lint_all(rest)
         return cmd_js_lint(rest)
     if cmd == "orchestrator":
         return cmd_orchestrator(rest)

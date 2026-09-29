@@ -187,7 +187,7 @@ Absent config, `no-undef` is a default-on correctness rule and fires on `documen
 }
 ```
 
-When the receipt's `config` step reports no config found, say so before acting on any finding, and recommend the snippet above as a follow-up.
+When the receipt's `config` step reports no config found, say so before acting on any finding, and recommend the snippet above as a follow-up. The lane now writes that starter config itself when one is absent — it never overwrites an existing config, so a project that already tuned its rules keeps them.
 
 Prefer the JSON form. The npx path deliberately refuses a repo that ships `oxlint.config.ts`/`.mts` or a `jsPlugins` entry, because oxlint *evaluates* those — a repo-authored one would run code on the reviewer's machine before any diagnostic exists. That refusal is a `SKIP`, not a finding: the fix is to install oxlint as a devDependency so the project supplies its own binary, not to remove the config.
 

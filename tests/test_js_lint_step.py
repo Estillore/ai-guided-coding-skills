@@ -428,3 +428,137 @@ class DocumentationConsistencyTest(unittest.TestCase):
                     .read_text(encoding="utf-8")
                 self.assertIn("js-lint", text)
                 self.assertIn("did not run", text)
+
+
+class InitConfigTest(unittest.TestCase):
+    """The one file this lane is allowed to write. Everything below is about
+    that write being safe."""
+
+    def test_creates_config_when_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            created, path, note = gr.init_oxlint_config(tmp)
+            self.assertTrue(created, note)
+            self.assertTrue(os.path.isfile(path), path)
+            with open(path, encoding="utf-8") as f:
+                config = json.load(f)
+        self.assertTrue(config["env"]["browser"])
+        self.assertEqual(sorted(config["plugins"]),
+                         ["eslint", "oxc", "typescript", "unicorn"])
+
+    def test_never_overwrites_an_existing_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            existing = Path(tmp, ".oxlintrc.json")
+            original = '{"rules":{"no-alert":"error"}}'
+            existing.write_text(original, encoding="utf-8")
+            created, path, note = gr.init_oxlint_config(tmp)
+            self.assertFalse(created, note)
+            self.assertIn("untouched", note)
+            self.assertEqual(existing.read_text(encoding="utf-8"), original)
+
+    def test_respects_a_jsonc_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, ".oxlintrc.jsonc").write_text("{}", encoding="utf-8")
+            created, _, note = gr.init_oxlint_config(tmp)
+        self.assertFalse(created)
+        self.assertIn("untouched", note)
+
+    def test_no_init_config_opt_out_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            created, path, note = gr.init_oxlint_config(tmp, enabled=False)
+            self.assertFalse(created)
+            self.assertIsNone(path)
+            self.assertIn("no-init-config", note)
+            self.assertFalse(
+                os.path.isfile(os.path.join(tmp, ".oxlintrc.json")))
+
+    def test_unwritable_repo_reports_and_does_not_raise(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(gr, "find_oxlint_config", lambda r: []), \
+                    mock.patch("builtins.open",
+                               side_effect=PermissionError("denied")):
+                created, path, note = gr.init_oxlint_config(tmp)
+        self.assertFalse(created)
+        self.assertIsNone(path)
+        self.assertIn("could not write", note)
+
+    def test_written_config_is_valid_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, path, _ = gr.init_oxlint_config(tmp)
+            with open(path, encoding="utf-8") as f:
+                json.load(f)
+
+
+class DiscoverRootsTest(unittest.TestCase):
+    def _project(self, base, name, marker="composer.json"):
+        d = Path(base, name)
+        d.mkdir(parents=True)
+        (d / marker).write_text("{}", encoding="utf-8")
+        return d
+
+    def test_finds_projects_by_composer_or_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = self._project(tmp, "phpapp")
+            b = self._project(tmp, "nodeapp", marker="package.json")
+            found = gr.discover_project_roots([tmp])
+        self.assertEqual(len(found), 2, msg=found)
+        self.assertIn(str(a), found)
+        self.assertIn(str(b), found)
+
+    def test_skips_vendor_and_node_modules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._project(tmp, "app")
+            self._project(tmp, "vendor")
+            self._project(tmp, "node_modules")
+            found = [os.path.basename(p) for p in
+                     gr.discover_project_roots([tmp])]
+        self.assertEqual(found, ["app"], msg=found)
+
+    def test_a_project_root_is_not_descended(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._project(tmp, "monorepo")
+            (Path(root, "packages")).mkdir()
+            (Path(root, "packages", "composer.json")).write_text(
+                "{}", encoding="utf-8")
+            found = gr.discover_project_roots([tmp])
+        self.assertEqual(found, [str(root)], msg=found)
+
+    def test_missing_root_is_skipped_not_fatal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            found = gr.discover_project_roots(
+                [tmp, os.path.join(tmp, "nope")])
+        self.assertIsInstance(found, list)
+
+    def test_discover_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._project(tmp, "app")
+            before = sorted(os.listdir(tmp))
+            rc = gr.cmd_js_lint_all(["--discover", "--roots", tmp])
+            after = sorted(os.listdir(tmp))
+        self.assertEqual(rc, 0)
+        self.assertEqual(before, after, msg="discover must not write")
+        self.assertFalse(os.path.isfile(
+            os.path.join(tmp, "app", ".oxlintrc.json")))
+
+
+class SweepTest(unittest.TestCase):
+    def test_all_flag_runs_every_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ("a", "b"):
+                d = Path(tmp, name)
+                d.mkdir()
+                (d / "composer.json").write_text("{}", encoding="utf-8")
+            rc = gr.cmd_js_lint_all(["--all", "--roots", tmp,
+                                     "--receipts", tmp])
+            self.assertEqual(rc, 0, "SKIP projects must not fail the sweep")
+            summary = json.loads(
+                (Path(tmp) / "js-lint-all.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["scanned"], 2, msg=summary)
+        self.assertEqual(summary["failing"], 0, msg=summary)
+
+    def test_sweep_rejects_bad_blocking(self):
+        self.assertEqual(
+            gr.cmd_js_lint_all(["--all", "--blocking", "maybe"]), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
