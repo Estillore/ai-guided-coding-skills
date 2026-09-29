@@ -1,0 +1,37 @@
+{
+  "generated": "2026-09-21",
+  "framework": {
+    "name": "python-stdlib",
+    "version": "3.x"
+  },
+  "source_of_standards": "project convention",
+  "entry_points": [
+    "scripts/guided_run.py",
+    "install.ps1",
+    "install.sh"
+  ],
+  "domains": [
+    "harness (scripts/)",
+    "skills/",
+    "agents/",
+    "mcp/"
+  ],
+  "dependency_direction": "scripts/ is stdlib-only; skills/, agents/, mcp/ are static content copied verbatim by the installers",
+  "structure_style": "flat toolkit: skills + agents + a single stdlib CLI harness",
+  "conventions": [
+    "stdlib-only Python (no third-party dependencies)",
+    "advisory commands always exit 0; only gates (validate-plan, verify, php-audit, react-doctor, js-lint, sync) may exit 1",
+    "guided-receipts/ is generated output and gitignored"
+  ],
+  "decisions_gotchas": [
+    "verify reads test_commands from docs/repo-map.json before composer/npm detection"
+  ],
+  "test_commands": {
+    "unit": "python -m unittest discover -s tests -v"
+  },
+  "infrastructure": {},
+  "growth": {
+    "last_audit": null
+  },
+  "open_questions": []
+}

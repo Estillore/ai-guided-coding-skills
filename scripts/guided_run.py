@@ -32,6 +32,17 @@ Commands:
         taint, warden JSON). Never installs anything. Writes a JSON
         receipt. Exit 0 on PASS or SKIP (not PHP / no php / no tools,
         with reason); 1 on FAIL (blocking-level findings).
+    js-lint [--repo DIR] [--scope full|changed] [--blocking LVL]
+        JavaScript correctness lane: detect .js/.mjs/.cjs sources -> use the
+        project's own oxlint if it has one, else the pinned binary via npx
+        (auto-download on first use) -> scan --format=json. Never installs
+        into the project, never runs --fix, and refuses the npx path when the
+        repo ships a config oxlint would evaluate (oxlint.config.ts, or a
+        jsPlugins entry). Also measures how many inline <script> blocks in
+        .php files oxlint cannot see. Writes a JSON receipt. Exit 0 on PASS or
+        SKIP (no JS / no Node / below floor / offline / repo ships an
+        evaluable config, with reason); 1 on FAIL (blocking-level findings).
+        A scan that never ran reports SKIP, never PASS.
     orchestrator [--repo DIR]
         External-supervision check: detect the Agent Orchestrator
         (`ao`) CLI + git worktree readiness. Never installs or
@@ -48,6 +59,19 @@ Commands:
         are available, optionally probe a real symbol query, or print the
         OpenCode v1 semantic-tool config. Never edits config. Writes a
         JSON receipt. Always exit 0.
+    sync [--repo DIR] [--home DIR] [--receipts DIR] [--check]
+        Diff skills/ against every installed tool path (kiro, grok,
+        opencode, zed) and report each guided skill as up-to-date,
+        stale, or missing. Foreign skills sharing a tool root are
+        ignored on purpose. Writes a JSON receipt. Exit 1 on drift.
+        Also reports skills/ dirs with no SKILL.md (invalid) and
+        names the installer recorded but no longer ships, while
+        they still sit in a tool root (orphaned).
+    record-install [--repo DIR] [--home DIR]
+        Write ~/.guided/installed.json with the guided skill names
+        shipped. The manifest is what lets `sync` spot a removed
+        guided skill without mistaking another tool's skill on the
+        same shared root for one.
     init [--repo DIR]
         Scaffold docs/repo-map.json from detected project facts.
 
@@ -58,14 +82,17 @@ SKIP-logged unless the Plan IR accuracy block requires them (then FAIL).
 
 Stdlib only. Windows + macOS + Linux. Exit codes: 0 PASS, 1 FAIL.
 """
+import hashlib
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 ACCURACY_DEFAULTS = {"mutation_min_backend": 70,
                      "mutation_min_frontend": 50}
@@ -73,6 +100,28 @@ ACCURACY_DEFAULTS = {"mutation_min_backend": 70,
 # react-doctor stays EXTERNAL: never bundled, provisioned at runtime.
 # Pinned here (single source of truth); bump deliberately, never @latest.
 REACT_DOCTOR_VERSION = "0.9.13"
+
+# oxlint is external for the same reason react-doctor is: never bundled, never
+# installed into the target project. Pinned here so a version bump is a
+# deliberate, reviewable edit. Set GUIDED_OXLINT_VERSION to override at
+# runtime; a bad pin degrades to SKIP (the download probe fails) instead of
+# failing the lane.
+OXLINT_VERSION = "1.80.0"
+
+# Files oxlint actually lints. Inline <script> in a .php template is NOT one of
+# them -- inline_script_audit measures that gap rather than hiding it.
+JS_EXTS = (".js", ".mjs", ".cjs")
+
+# Likely homes for a plain-PHP asset tree, tried in order when scoping a run.
+JS_SCOPE_DIRS = ("public", "assets", "js", "resources", "static", "src",
+                 "www", "dist")
+
+OXLINT_CONFIGS = (".oxlintrc.json", ".oxlintrc.jsonc", "oxlint.config.ts",
+                  "oxlint.config.mts")
+
+# Every receipt path is named by this one format; a second spelling would
+# make receipts sort inconsistently.
+RUN_ID_FORMAT = "%Y%m%d-%H%M%S"
 
 REACT_RUNTIME_DEPS = ("react", "react-dom", "next", "preact",
                       "react-native", "expo", "@remix-run/react",
@@ -121,20 +170,126 @@ SECRET_RE = re.compile(
     r"\s*[:=]\s*(?![${\s])([^\s#]+)", re.I)
 
 
-def sh(cmd, cwd, timeout=600):
+BATCH_EXT = (".cmd", ".bat")
+WIN_EXE_EXT = (".exe", ".com")
+
+# sh() exit codes. 125 is deliberately distinct from 127: "the environment
+# could not start this" and "there is no such program" need different
+# remedies, and conflating them is how a missing tool turns into a
+# "unparseable output" report.
+SH_TIMEOUT = 124
+SH_NO_PROGRAM = 127
+SH_NO_ENVIRONMENT = 125
+
+
+def _resolve_program(prog, cwd=None):
+    """Runnable absolute path for a program, or None when it cannot run.
+
+    Windows is why this exists. `npx` ships as a POSIX script beside npx.cmd
+    and npx.ps1, and CreateProcess runs neither a bare name nor a .ps1.
+    shutil.which already applies PATHEXT, so a bare name is a PATH lookup.
+
+    A repo-relative path (vendor/bin/phpstan) must be resolved against `cwd`,
+    NOT against the process CWD: CreateProcess resolves argv[0] against the
+    parent, while the shell this replaced resolved it against cwd. Skipping
+    that makes composer vendor tools unreachable from any other directory.
+    """
+    if os.name != "nt":
+        return prog
+    ext = os.path.splitext(prog)[1].lower()
+    if ext in (".ps1", ".psm1", ".psd1"):
+        return None                       # not a Win32 application
+    has_sep = os.sep in prog or bool(os.altsep and os.altsep in prog)
+    if not has_sep:
+        found = shutil.which(prog)       # PATH + PATHEXT, like a shell
+        if found:
+            return found
+    base = cwd or os.getcwd()
+    if ext in BATCH_EXT or ext in WIN_EXE_EXT:
+        cands = [prog]
+    else:
+        cands = [prog] + [prog + s for s in BATCH_EXT + WIN_EXE_EXT]
+    for cand in cands:
+        full = os.path.abspath(os.path.join(base, cand))
+        if os.path.exists(full):
+            return full
+    return None
+
+
+def _run_process(argv, cwd, timeout, use_shell):
+    """Spawn a process and return (rc, output) with the shared conventions.
+
+    One definition of the 2000-char output cap and of the exit codes for
+    failures a caller cannot act on: 124 timeout, 125 the environment could
+    not start the process, 127 no such program. Everything else is the
+    program's own exit code.
+    """
     try:
-        p = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True,
-                           text=True, timeout=timeout)
-        tail = (p.stdout + p.stderr)[-2000:]
-        return p.returncode, tail.strip()
+        p = subprocess.run(argv, cwd=cwd, shell=use_shell,
+                           capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return 124, "TIMEOUT after %ss: %s" % (timeout, cmd)
+        label = argv if isinstance(argv, str) else " ".join(argv)
+        return SH_TIMEOUT, "TIMEOUT after %ss: %s" % (timeout, label)
     except FileNotFoundError as e:
-        return 127, "not found: %s" % e
+        return SH_NO_PROGRAM, "not found: %s" % e
+    except OSError as e:
+        # A bad cwd, or a directory we may not enter. Reported, not raised:
+        # this is the wrong argument, and the caller gets to decide.
+        return SH_NO_ENVIRONMENT, "cannot run in %s: %s" % (cwd, e)
+    return p.returncode, (p.stdout + p.stderr)[-2000:].strip()
+
+
+def sh(cmd, cwd, timeout=600):
+    """Run `cmd` as an argv list, never through a shell.
+
+    A value can therefore never be re-read as shell syntax. A shell string is
+    rejected rather than guessed at: on POSIX subprocess would treat it as one
+    filename, on Windows CreateProcess would re-parse it -- per-platform
+    behaviour differences are a trap, so both forms must be explicit.
+    """
+    if isinstance(cmd, str):
+        return SH_NO_PROGRAM, ("sh() takes an argv list, not a shell "
+                               "string: %r "
+                     "(use sh([...]), or sh_line() for a config-defined "
+                     "command line)" % cmd[:120])
+    argv = [str(a) for a in cmd]
+    if not argv:
+        return SH_NO_PROGRAM, "empty command"
+    prog = _resolve_program(argv[0], cwd)
+    if prog is None:
+        return SH_NO_PROGRAM, "not found or not executable: %s" % argv[0]
+    if os.name == "nt" and os.path.splitext(prog)[1].lower() in BATCH_EXT:
+        # A .cmd/.bat argv is still handed to cmd.exe, where a double quote in
+        # a value breaks out of the quoting subprocess.apply.
+        for value in argv[1:]:
+            if '"' in value:
+                return SH_NO_PROGRAM, ("refusing a double quote in an "
+                                       "argument to the "
+                             "batch wrapper %s: cmd.exe would re-parse it"
+                             % os.path.basename(prog))
+    argv[0] = prog
+    return _run_process(argv, cwd, timeout, False)
+
+
+def sh_line(line, cwd, timeout=600):
+    """Run a project-defined command LINE, shell-executed on purpose.
+
+    npm/composer scripts and repo-map test_commands are command lines by
+    definition and come from the project's own config, so they keep the shell
+    (npm relies on it). Never pass an interpolated value through here: that is
+    the injection the sh()/sh_line() split exists to prevent. Dynamic data
+    belongs in sh() as argv.
+    """
+    return _run_process(line, cwd, timeout, True)
+
+
+def _run_id():
+    """Timestamp id for one receipt directory."""
+    return datetime.now(timezone.utc).strftime(RUN_ID_FORMAT)
 
 
 def git_sha(repo):
-    rc, out = sh("git rev-parse --short HEAD", repo, timeout=30)
+    rc, out = sh(["git", "rev-parse", "--short", "HEAD"], repo, timeout=30)
     return out.strip() if rc == 0 else "uncommitted"
 
 
@@ -209,9 +364,27 @@ def node_version():
     """(major, minor) tuple, or None when node is missing/unparseable."""
     if not shutil.which("node"):
         return None
-    rc, out = sh("node --version", ".", timeout=30)
+    rc, out = sh(["node", "--version"], ".", timeout=30)
     m = re.match(r"\s*v(\d+)\.(\d+)", out) if rc == 0 else None
     return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def node_floor_ok():
+    """(ok, reason) for the Node floor every npx-backed lane needs.
+
+    One definition so the minimum and the SKIP wording cannot drift between
+    the React and JS lanes: a lane that reported a different floor than its
+    neighbour would be a support question nobody could answer from the code.
+    """
+    if not shutil.which("node"):
+        return False, "SKIP: node not found (Node.js required)"
+    nv = node_version()
+    if nv is None:
+        return False, "SKIP: node not found or version unparseable"
+    if not (nv[0] > 22 or (nv[0] == 22 and nv[1] >= 12)
+            or (nv[0] == 20 and nv[1] >= 19)):
+        return False, "SKIP: node %d.%d below minimum (20.19+/22.12+)" % nv
+    return True, "node %d.%d" % nv
 
 
 def ensure_react_doctor(repo):
@@ -227,13 +400,11 @@ def ensure_react_doctor(repo):
         return False, "SKIP: not a React project (no react runtime dep)"
     if not shutil.which("npx"):
         return False, "SKIP: npx not found (Node.js required)"
-    nv = node_version()
-    if nv is None:
-        return False, "SKIP: node not found or version unparseable"
-    if not (nv[0] > 22 or (nv[0] == 22 and nv[1] >= 12)
-            or (nv[0] == 20 and nv[1] >= 19)):
-        return False, "SKIP: node %d.%d below minimum (20.19+/22.12+)" % nv
-    rc, out = sh("npx -y react-doctor@%s --version" % REACT_DOCTOR_VERSION,
+    ok, reason = node_floor_ok()
+    if not ok:
+        return False, reason
+    rc, out = sh(["npx", "-y", "react-doctor@" + REACT_DOCTOR_VERSION,
+                  "--version"],
                  repo, timeout=600)
     if rc != 0:
         return False, "SKIP: download/probe failed: %s" % out[-300:]
@@ -484,7 +655,8 @@ def detect_infrastructure(repo):
                    if any(a in d for a in AUTH_DEPS)})
 
     env_tracked = any(
-        sh("git ls-files --error-unmatch %s" % f, repo, timeout=30)[0] == 0
+        sh(["git", "ls-files", "--error-unmatch", f], repo,
+           timeout=30)[0] == 0
         for f in (".env", ".env.production"))
 
     secret_hits = []
@@ -621,17 +793,16 @@ def run_accuracy_gates(repo, plan, results):
         if shutil.which("vendor/bin/infection") or os.path.isfile(
                 os.path.join(repo, "vendor", "bin", "infection")):
             f = ",".join(scope)
-            rc, out = sh("vendor/bin/infection --filter=%s "
-                         "--min-msi=%s --threads=4" % (
-                             f, mins["mutation_min_backend"]), repo,
-                         timeout=1800)
+            rc, out = sh(["vendor/bin/infection", "--filter=" + f,
+                          "--min-msi=" + str(mins["mutation_min_backend"]),
+                          "--threads=4"], repo, timeout=1800)
             results.append({"gate": "mutation:backend", "rc": rc,
                             "out": out[-1000:]})
             mutated = mutated or rc == 0
             ok = ok and rc == 0
         if shutil.which("npx") and os.path.isfile(
                 os.path.join(repo, "stryker.config.json")):
-            rc, out = sh("npx stryker run", repo, timeout=1800)
+            rc, out = sh(["npx", "stryker", "run"], repo, timeout=1800)
             results.append({"gate": "mutation:frontend", "rc": rc,
                             "out": out[-1000:]})
             mutated = mutated or rc == 0
@@ -654,7 +825,8 @@ def run_accuracy_gates(repo, plan, results):
     for rule in acc.get("arch_rules", []) or []:
         if os.path.isfile(os.path.join(repo, "deptrac.yaml")) or \
                 os.path.isfile(os.path.join(repo, "deptrac.php")):
-            rc, out = sh("vendor/bin/deptrac analyse --no-progress", repo)
+            rc, out = sh(["vendor/bin/deptrac", "analyse",
+                           "--no-progress"], repo)
         else:
             rc, out = (1, "arch rule '%s': no deptrac config found" % rule)
         results.append({"gate": "arch:%s" % rule, "rc": rc,
@@ -679,7 +851,7 @@ def cmd_verify(args):
             i += 1
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     results = []
     status = "PASS"
 
@@ -696,7 +868,7 @@ def cmd_verify(args):
                                "scripts)"})
         status = "FAIL"
     for name, cmd in ladder:
-        rc, out = sh(cmd, repo)
+        rc, out = sh_line(cmd, repo)   # config-defined command line
         results.append({"step": name, "cmd": cmd, "rc": rc, "out": out})
         print("[%s] %s -> %s" % ("PASS" if rc == 0 else "FAIL", name, cmd))
         if rc != 0:
@@ -746,7 +918,7 @@ def cmd_react_doctor(args):
         return 1
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     results = []
     status = "SKIP"
 
@@ -758,12 +930,12 @@ def cmd_react_doctor(args):
     if ready:
         rep_path = os.path.join(tempfile.gettempdir(),
                                 "rd-%s.json" % run_id)
-        cmd = ("npx -y react-doctor@%s --json --json-out %s --scope %s "
-               "--blocking %s --no-telemetry --no-score"
-               % (REACT_DOCTOR_VERSION, rep_path, scope, blocking))
+        argv = ["npx", "-y", "react-doctor@" + REACT_DOCTOR_VERSION,
+                "--json", "--json-out", rep_path, "--scope", scope,
+                "--blocking", blocking, "--no-telemetry", "--no-score"]
         if base:
-            cmd += " --base %s" % base
-        rc, out = sh(cmd, repo, timeout=900)
+            argv += ["--base", base]
+        rc, out = sh(argv, repo, timeout=900)
         rep = load_json(rep_path)
         try:
             os.remove(rep_path)
@@ -819,7 +991,7 @@ def cmd_growth(args):
             i += 1
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     facts, gaps = detect_infrastructure(repo)
     sev_rank = {"critical": 3, "high": 2, "medium": 1, "low": 0}
     services = facts["compose_services"]
@@ -924,10 +1096,10 @@ def _tool(repo, name):
     d = os.path.join(repo, "vendor", "bin")
     for cand in (name, name + ".bat", name + ".cmd"):
         if os.path.isfile(os.path.join(d, cand)):
-            return "\"vendor/bin/%s\"" % cand
+            return ["vendor/bin/%s" % cand]
     phar = os.path.join(d, name + ".phar")
     if os.path.isfile(phar):
-        return "php \"vendor/bin/%s.phar\"" % name
+        return ["php", "vendor/bin/%s.phar" % name]
     return None
 
 
@@ -946,21 +1118,62 @@ def _skip(step, reason, hint=None):
     return s
 
 
-def changed_php_files(repo):
-    """Changed + untracked .php paths via git ([] when unavailable)."""
+def changed_files(repo, ext):
+    """Changed + untracked paths ending in `ext` via git ([] on any error).
+
+    `ext` carries its dot, e.g. ".php". One implementation for every lane that
+    scopes to touched files: the git plumbing is identical, and a second copy
+    is how one lane ends up quietly disagreeing with another about what
+    "changed" means.
+    """
     files = []
-    for cmd in ("git diff --name-only HEAD -- \"*.php\"",
-                "git ls-files --others --exclude-standard -- \"*.php\""):
+    for cmd in (["git", "diff", "--name-only", "HEAD", "--", "*" + ext],
+                ["git", "ls-files", "--others", "--exclude-standard",
+                 "--", "*" + ext]):
         rc, out = sh(cmd, repo, timeout=30)
         if rc != 0:
             return []
         for ln in out.splitlines():
             p = ln.strip().strip("\"")
-            if p.endswith(".php") \
+            if p.endswith(ext) \
                     and os.path.isfile(os.path.join(repo, p)) \
-                    and "\"%s\"" % p not in files:
-                files.append("\"%s\"" % p)
+                    and p not in files:
+                files.append(p)
     return files
+
+
+def changed_php_files(repo):
+    """Changed + untracked .php paths via git ([] when unavailable)."""
+    return changed_files(repo, ".php")
+
+
+NOT_RUN_RCS = (SH_TIMEOUT, SH_NO_ENVIRONMENT, SH_NO_PROGRAM)
+
+
+def _not_run(step, rc, out, **extra):
+    """The step result for a tool that never produced output.
+
+    "The auditor could not start" and "the auditor ran and did not speak
+    JSON" are different problems with different fixes. Returning this instead
+    of a parse error is the difference between a readable report and a
+    mystery. Only consult it when rc is in NOT_RUN_RCS.
+    """
+    s = {"step": step, "rc": rc, "errors": 0, "warnings": 0,
+         "not_run": out, "out": out[-1000:]}
+    s.update(extra)
+    return s
+
+
+def _unparseable(step, rc, out, **extra):
+    """The step result for a tool that did not emit JSON.
+
+    One shape for every JSON-emitting auditor, so a caller cannot drift on
+    which keys it fills in when the output cannot be read.
+    """
+    s = {"step": step, "rc": rc, "errors": 0, "warnings": 0,
+         "error": "unparseable output", "out": out[-1000:]}
+    s.update(extra)
+    return s
 
 
 def _parse_json_tail(out):
@@ -977,29 +1190,29 @@ def step_phpstan(repo, scope):
     if not tool:
         return _skip("phpstan", "not installed",
                       "composer require --dev phpstan/phpstan")
-    cmd = "%s analyse --error-format=json --no-progress" % tool
+    argv = list(tool) + ["analyse", "--error-format=json", "--no-progress"]
     used = "full"
     cfg = _first_file(repo, ("phpstan.neon", "phpstan.neon.dist",
                              "phpstan.dist.neon"))
     if scope == "changed":
         changed = changed_php_files(repo)
         if changed:
-            cmd += " " + " ".join(changed)
+            argv += changed
             used = "changed"
     if used == "full" and not cfg:
         for d in ("src", "app", "lib"):
             if os.path.isdir(os.path.join(repo, d)):
-                cmd += " \"%s\"" % d
+                argv.append(d)
                 break
         else:
             return _skip("phpstan", "no phpstan.neon and no src|app|lib dir",
                          "create phpstan.neon with paths + level")
-    rc, out = sh(cmd, repo, timeout=900)
+    rc, out = sh(argv, repo, timeout=900)
+    if rc in NOT_RUN_RCS:
+        return _not_run("phpstan", rc, out, scope=used)
     rep = _parse_json_tail(out)
     if rep is None:
-        return {"step": "phpstan", "rc": rc, "errors": 0, "warnings": 0,
-                "scope": used, "error": "unparseable output",
-                "out": out[-1000:]}
+        return _unparseable("phpstan", rc, out, scope=used)
     n, sample = 0, []
     files = rep.get("files") or {}
     if isinstance(files, dict):
@@ -1018,10 +1231,12 @@ def step_pint(repo, scope):
     if not tool:
         return _skip("pint", "not installed",
                       "composer require --dev laravel/pint")
-    cmd = "%s --test" % tool
+    argv = list(tool) + ["--test"]
     if scope == "changed":
-        cmd += " --dirty"
-    rc, out = sh(cmd, repo, timeout=600)
+        argv.append("--dirty")
+    rc, out = sh(argv, repo, timeout=600)
+    if rc in NOT_RUN_RCS:
+        return _not_run("pint", rc, out, scope=scope)
     if rc == 0:
         return {"step": "pint", "rc": rc, "errors": 0, "warnings": 0,
                 "scope": scope}
@@ -1039,13 +1254,13 @@ def step_composer_audit(repo):
     if not os.path.isfile(os.path.join(repo, "composer.lock")):
         return _skip("composer-audit", "no composer.lock",
                       "run composer install to generate the lock file")
-    rc, out = sh("composer audit --format=json --locked --no-dev",
-                 repo, timeout=300)
+    rc, out = sh(["composer", "audit", "--format=json", "--locked",
+                  "--no-dev"], repo, timeout=300)
+    if rc in NOT_RUN_RCS:
+        return _not_run("composer-audit", rc, out)
     rep = _parse_json_tail(out)
     if rep is None:
-        return {"step": "composer-audit", "rc": rc, "errors": 0,
-                "warnings": 0, "error": "unparseable output",
-                "out": out[-1000:]}
+        return _unparseable("composer-audit", rc, out)
     errs, warns, sample = 0, 0, []
     adv = rep.get("advisories") or {}
     if isinstance(adv, dict):
@@ -1072,8 +1287,10 @@ def step_rector(repo):
     if not cfg:
         return _skip("rector", "no rector.php config",
                       "create rector.php with codeQuality/deadCode sets")
-    rc, out = sh("%s process --dry-run --no-progress" % tool,
+    rc, out = sh(list(tool) + ["process", "--dry-run", "--no-progress"],
                  repo, timeout=900)
+    if rc in NOT_RUN_RCS:
+        return _not_run("rector", rc, out)
     if rc == 0:
         return {"step": "rector", "rc": rc, "errors": 0, "warnings": 0}
     if "would change" in out.lower() \
@@ -1097,8 +1314,10 @@ def step_deptrac(repo):
     if not cfg:
         return _skip("deptrac", "no deptrac config",
                       "create deptrac.yaml with layers + ruleset")
-    rc, out = sh("%s analyse --formatter=json --no-progress" % tool,
-                 repo, timeout=600)
+    rc, out = sh(list(tool) + ["analyse", "--formatter=json",
+                               "--no-progress"], repo, timeout=600)
+    if rc in NOT_RUN_RCS:
+        return _not_run("deptrac", rc, out)
     rep = _parse_json_tail(out)
     n, err = 0, None
     if isinstance(rep, dict) and isinstance(rep.get("violations"), list):
@@ -1125,7 +1344,9 @@ def step_psalm_taint(repo):
     if not cfg:
         return _skip("psalm-taint", "no psalm.xml config",
                       "run vendor/bin/psalm --init to generate one")
-    rc, out = sh("%s --taint-analysis" % tool, repo, timeout=900)
+    rc, out = sh(list(tool) + ["--taint-analysis"], repo, timeout=900)
+    if rc in NOT_RUN_RCS:
+        return _not_run("psalm-taint", rc, out)
     if rc == 0:
         return {"step": "psalm-taint", "rc": rc, "errors": 0,
                 "warnings": 0}
@@ -1142,8 +1363,11 @@ def step_warden(repo):
         return _skip("warden", "not a Warden-equipped Laravel app",
                       "composer require --dev dgtlss/warden "
                       "(Laravel only)")
-    rc, out = sh("php artisan warden:audit --format=json --no-notify",
+    rc, out = sh(["php", "artisan", "warden:audit", "--format=json",
+                  "--no-notify"],
                  repo, timeout=900)
+    if rc in NOT_RUN_RCS:
+        return _not_run("warden", rc, out)
     if rc == 0:
         return {"step": "warden", "rc": rc, "errors": 0, "warnings": 0}
     if rc == 2:
@@ -1179,7 +1403,7 @@ def cmd_php_audit(args):
         return 1
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     results = []
     status = "SKIP"
 
@@ -1228,6 +1452,441 @@ def cmd_php_audit(args):
     return 0 if status in ("PASS", "SKIP") else 1
 
 
+def has_js_sources(repo, cap=5000):
+    """True when the repo holds at least one lintable JS asset."""
+    n = 0
+    for root, dirs, files in os.walk(repo):
+        dirs[:] = [d for d in dirs if d not in WALK_SKIP]
+        for fn in files:
+            if os.path.splitext(fn)[1].lower() in JS_EXTS:
+                n += 1
+                if n >= cap:
+                    return True
+    return n > 0
+
+
+def local_oxlint_path(repo):
+    """Path to the project's own oxlint binary, or None.
+
+    Windows ships a .cmd wrapper beside the extensionless shim, so the
+    extension list is not decoration: checking only the bare name would
+    report "no local oxlint" on exactly the platform that has one.
+    """
+    d = os.path.join(repo, "node_modules", "bin")
+    for cand in ("oxlint", "oxlint.cmd", "oxlint.bat", "oxlint.exe"):
+        if os.path.isfile(os.path.join(d, cand)):
+            return os.path.join(d, cand).replace("\\", "/")
+    return None
+
+
+def oxlint_argv(repo):
+    """(argv_prefix, source) for the oxlint to run. Never None.
+
+    A project that already depends on oxlint gets its own binary: that is the
+    version its CI already trusts, and running a different linter than the one
+    in the lockfile is exactly how "green in CI, red here" starts. npx is the
+    fallback for the lockfile-free PHP repos this lane exists for, and is
+    pinned for the same reason react-doctor is.
+    """
+    local = local_oxlint_path(repo)
+    if local:
+        return [local], "project"
+    version = (os.environ.get("GUIDED_OXLINT_VERSION")
+               or OXLINT_VERSION).strip()
+    return ["npx", "-y", "oxlint@" + version], "pinned:" + version
+
+
+CODE_CONFIG_RE = re.compile(r"\bjsPlugins\b")
+# A .ts/.mts oxlint config is a MODULE: oxlint evaluates it, so a repo-authored
+# one runs code with the developer's privileges before any diagnostic exists.
+OXLINT_CODE_CONFIGS = ("oxlint.config.ts", "oxlint.config.mts")
+# A npm spec, and only a strict one. GUIDED_OXLINT_VERSION reaches the npx
+# command line, and the output stream and receipt; anything with whitespace
+# or a flag-shaped prefix would let an env value forge a verdict line.
+OXLINT_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$")
+
+
+def _oxlint_version_pin():
+    """(version, error) for the npx fallback pin. Never raises."""
+    raw = os.environ.get("GUIDED_OXLINT_VERSION", "").strip() or OXLINT_VERSION
+    raw = raw.strip()
+    if not OXLINT_VERSION_RE.match(raw):
+        return None, ("invalid GUIDED_OXLINT_VERSION %r: expected a semver "
+                      "like 1.80.0" % raw[:40])
+    return raw, None
+
+
+def oxlint_code_config_present(repo):
+    """True when the repo can make oxlint execute code of its own.
+
+    Inherited harness trust model, not new: php-audit already runs the repo's
+    vendor/bin/*, and react-doctor already runs npx from the repo CWD. This
+    function narrows it where narrowing is free -- the npx fallback, which is
+    the only path that would fetch and run a *new* copy of the linter, refuses
+    a repo that ships an evaluable config.
+    """
+    for fn in OXLINT_CODE_CONFIGS:
+        if os.path.isfile(os.path.join(repo, fn)):
+            return fn
+    for cfg in find_oxlint_config(repo):
+        if CODE_CONFIG_RE.search(_read_bounded(os.path.join(repo, cfg), 65536)):
+            return cfg + " (jsPlugins)"
+    return None
+
+
+def ensure_oxlint(repo):
+    """Detect JS-lane readiness. Returns (ready, reason, version).
+
+    Never installs into the project and never raises: False means continue
+    without oxlint and state the reason in one line. Availability is
+    evidence-quality, not a hard gate -- a missing linter must not be able to
+    fail a run the way a real finding does.
+    """
+    if not has_js_sources(repo):
+        return False, "SKIP: no .js/.mjs/.cjs sources found", None
+    if not local_oxlint_path(repo):
+        version, err = _oxlint_version_pin()
+        if err:
+            return False, "SKIP: " + err, None
+    else:
+        version = None
+    if not local_oxlint_path(repo) and not shutil.which("npx"):
+        return False, ("SKIP: npx not found and no local oxlint "
+                       "(Node.js required)"), None
+    ok, reason = node_floor_ok()
+    if not ok:
+        return False, reason, None
+    argv, source = oxlint_argv(repo)
+    if source != "project":
+        risky = oxlint_code_config_present(repo)
+        if risky:
+            return False, ("SKIP: %s makes oxlint evaluate repo-supplied "
+                           "code; refusing the npx path. Install oxlint as a "
+                           "devDependency and re-run" % risky), None
+    rc, out = sh(argv + ["--version"], repo, timeout=600)
+    if rc != 0:
+        return False, "SKIP: oxlint unavailable via %s: %s" % (source,
+                                                              out[-200:]), None
+    # oxlint prints "Version: 1.80.0"; keep the bare semver so the receipt
+    # field is a version, not a sentence fragment.
+    found = re.search(r"[0-9]+\.[0-9]+\.[0-9]+[^\s]*", out)
+    return True, "oxlint ready via %s (%s)" % (source, out.strip()[:60]), \
+        (found.group(0) if found else out.strip()[:40])
+
+
+def find_oxlint_config(repo, cap=20):
+    """Relative paths of oxlint config files found anywhere in the repo.
+
+    Nested configs are real -- oxlint loads them per directory -- so looking
+    only at the root would miss a project that scopes its rules under public/
+    and then read the whole result as "no config".
+    """
+    found = []
+    for root, dirs, files in os.walk(repo):
+        dirs[:] = [d for d in dirs if d not in WALK_SKIP]
+        for fn in files:
+            if fn in OXLINT_CONFIGS:
+                found.append(
+                    os.path.relpath(os.path.join(root, fn), repo)
+                    .replace("\\", "/"))
+                if len(found) >= cap:
+                    return sorted(found)
+    return sorted(found)
+
+
+def _oxlint_targets(repo, scope):
+    """(targets, used_scope) for a run. 'full' falls back to the repo root.
+
+    Every existing candidate directory is linted, not just the first hit.
+    A Laravel repo has both public/ (compiled bundles) and resources/js/ (the
+    sources anyone actually edits), and stopping at index 0 would report
+    `scope: full` over public/ while the file under review never ran.
+    """
+    if scope == "changed":
+        changed = []
+        for ext in JS_EXTS:
+            changed.extend(changed_files(repo, ext))
+        if changed:
+            return changed, "changed"
+    found = [d for d in JS_SCOPE_DIRS if os.path.isdir(os.path.join(repo, d))]
+    return (found or ["."]), "full"
+
+
+def step_oxlint(repo, scope):
+    """oxlint as a correctness gate. Returns the shared step-dict shape.
+
+    No category flags are passed: the project's own config decides severity,
+    and with no config oxlint's default already denies `correctness`. Adding
+    -D/-W here would silently override a deliberate per-rule downgrade.
+    """
+    argv, source = oxlint_argv(repo)
+    targets, used = _oxlint_targets(repo, scope)
+    rc, out = sh(argv + ["--format=json"] + targets, repo, timeout=900)
+    if rc in NOT_RUN_RCS:
+        return _not_run("oxlint", rc, out, scope=used, source=source)
+    rep = _parse_json_tail(out)
+    if rep is None:
+        # A clean run can legitimately print no JSON at all. That is zero
+        # findings, not a parse failure -- conflating the two would report a
+        # green file as a broken tool.
+        if rc == 0 and not out.strip():
+            return {"step": "oxlint", "rc": 0, "errors": 0, "warnings": 0,
+                    "scope": used, "source": source, "out": "clean"}
+        return _unparseable("oxlint", rc, out, scope=used, source=source)
+    diags = rep.get("diagnostics")
+    if not isinstance(diags, list):
+        return _unparseable("oxlint", rc, out, scope=used, source=source)
+    errs = warns = 0
+    sample = []
+    for d in diags:
+        if not isinstance(d, dict):
+            continue
+        sev = (d.get("severity") or "").lower()
+        if sev == "error":
+            errs += 1
+        else:
+            warns += 1
+        if len(sample) < 5:
+            sample.append(_one_line("%s %s %s" % (_oxlint_line(d),
+                                                   d.get("code", "?"),
+                                                   d.get("message", ""))))
+    s = {"step": "oxlint", "rc": rc, "errors": errs, "warnings": warns,
+         "scope": used, "source": source, "sample": sample,
+         # What was actually handed to the linter. Without this the receipt
+         # says "full" and nothing more, which is indistinguishable from
+         # having covered the whole repo.
+         "targets": targets[:20],
+         "files": rep.get("number_of_files")}
+    if errs or warns:
+        s["out"] = out[-1000:]
+        s["hint"] = ("oxlint --fix applies the safe fixes, but a gate never "
+                     "edits: make the change deliberately, then re-run")
+    else:
+        s["out"] = "clean"
+    return s
+
+
+def _one_line(value, limit=300):
+    """Collapse a repo-controlled string to one printable line.
+
+    Filenames, rule codes and tool messages are attacker-influenced when the
+    repo is, and these are exactly the strings an agent is told to read as
+    evidence. A newline in a filename would otherwise be able to forge the
+    next line of the receipt output, including a verdict line.
+    """
+    text = "".join(ch if ch.isprintable() else " " for ch in str(value))
+    text = " ".join(text.split())
+    return text[:limit]
+
+
+def _oxlint_line(diag):
+    """`file.js:12:3` from an oxlint JSON diagnostic, degrading to `file.js`."""
+    name = diag.get("filename") or "?"
+    labels = diag.get("labels")
+    if not isinstance(labels, list) or not labels:
+        return name
+    span = (labels[0] or {}).get("span") if isinstance(labels[0], dict) \
+        else None
+    if not isinstance(span, dict):
+        return name
+    return "%s:%s:%s" % (name, span.get("line", "?"), span.get("column", "?"))
+
+
+# A <script> opening tag and its attributes. The attribute class is BOUNDED
+# on purpose: `<script` repeated with no `>` anywhere makes an unbounded
+# [^>]* scan-and-backtrack at every one of the k occurrences, which is
+# Theta(k*n) on a 512 KB file -- a repository can hang the gate with a file
+# that never contains a real tag. A tag longer than 1000 characters is
+# pathological, and missing one is a coverage note, never a crash.
+SCRIPT_TAG_RE = re.compile(r"<script\b([^>]{0,1000})>", re.I)
+SRC_ATTR_RE = re.compile(r"\bsrc\s*=", re.I)
+SCRIPT_CLOSE = "</script"
+# Per-file ceiling on counted blocks. Same reasoning: a bound on the work, not
+# a claim that a file has at most this many scripts.
+INLINE_MAX_PER_FILE = 500
+
+
+def _inline_script_count(text):
+    """Non-empty <script> bodies with no src= in the opening tag.
+
+    Split into "find the tag" + "look for the close" rather than one regex
+    with a nested lazy group: str.find is a C-level scan, and keeping the
+    quantifiers out of each other is what makes the cost predictable.
+    """
+    n = 0
+    for m in SCRIPT_TAG_RE.finditer(text):
+        if SRC_ATTR_RE.search(m.group(1)):
+            continue
+        close = text.find(SCRIPT_CLOSE, m.end())
+        if close == -1:
+            continue                      # unterminated tag, nothing to count
+        if text[m.end():close].strip():
+            n += 1
+            if n >= INLINE_MAX_PER_FILE:
+                break
+    return n
+
+
+def _read_bounded(path, limit=524288):
+    """Read at most `limit` bytes, or '' for anything not a regular file.
+
+    A size check on the open file is not a size check: os.path.getsize
+    reports 0 for a character device, so a .php symlink to /dev/zero passes
+    any threshold and then reads without end. lstat decides regularity, and
+    the read itself stays bounded.
+    """
+    try:
+        if not stat.S_ISREG(os.lstat(path).st_mode):
+            return ""
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            return f.read(limit + 1)[:limit]
+    except OSError:
+        return ""
+
+
+def inline_script_audit(repo, cap=200):
+    """Count <script> bodies in .php files that oxlint can never see.
+
+    oxlint lints .js/.mjs/.cjs plus the <script> blocks of .vue/.svelte/.astro.
+    A script body inside a .php template is outside that set, so a clean run
+    on a PHP project is only as complete as the externalisation rate. This
+    measures that rate instead of letting a green receipt imply full coverage.
+    Heuristic by nature: a <script> string inside PHP or HTML comments still
+    counts, which errs toward over-reporting the gap.
+    """
+    files, blocks, capped = [], 0, False
+    for root, dirs, names in os.walk(repo):
+        if capped:
+            break
+        dirs[:] = [d for d in dirs if d not in WALK_SKIP]
+        for fn in names:
+            if not fn.lower().endswith(".php"):
+                continue
+            n = _inline_script_count(_read_bounded(os.path.join(root, fn)))
+            if n:
+                files.append({"file": os.path.relpath(
+                    os.path.join(root, fn), repo).replace("\\", "/"),
+                    "inline_scripts": n})
+                blocks += n
+                if len(files) >= cap:
+                    # Authoritative: a cap the caller cannot rely on is not a
+                    # cap. break out of BOTH loops, or the walk keeps
+                    # accumulating past the number the field reports.
+                    capped = True
+                    break
+    return {"files_with_inline_js": len(files),
+            "inline_script_blocks": blocks, "capped": capped,
+            "examples": files[:10]}
+
+
+NO_OXLINT_CONFIG_HINT = (
+    "no .oxlintrc.* / oxlint.config.* found: without env.browser the "
+    "default-on no-undef rule cannot see document/window, so every finding "
+    "is a false positive. Minimal config: "
+    '{"env":{"browser":true},"plugins":["eslint","typescript","unicorn",'
+    '"oxc"],"categories":{"correctness":"error","suspicious":"warn"}} '
+    "- note that `plugins` REPLACES the defaults, so all four must be listed.")
+
+
+def cmd_js_lint(args):
+    repo, scope, blocking, receipts = ".", "full", "error", None
+    i = 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            repo, i = args[i + 1], i + 2
+        elif args[i] == "--scope" and i + 1 < len(args):
+            scope, i = args[i + 1], i + 2
+        elif args[i] == "--blocking" and i + 1 < len(args):
+            blocking, i = args[i + 1], i + 2
+        elif args[i] == "--receipts" and i + 1 < len(args):
+            receipts, i = args[i + 1], i + 2
+        else:
+            i += 1
+    if scope not in ("full", "changed"):
+        print("JS-LINT: FAIL\n- bad --scope: %s (full|changed)" % scope)
+        return 1
+    if blocking not in ("error", "warning", "none"):
+        print("JS-LINT: FAIL\n- bad --blocking: %s "
+              "(error|warning|none)" % blocking)
+        return 1
+    repo = os.path.abspath(repo)
+    sha = git_sha(repo)
+    run_id = _run_id()
+    results = []
+    status = "SKIP"
+
+    coverage = inline_script_audit(repo)
+    ready, reason, version = ensure_oxlint(repo)
+    results.append({"step": "ensure", "rc": 0 if ready else 1, "out": reason})
+    print("[%s] ensure -> %s" % ("PASS" if ready else "SKIP", reason))
+
+    if ready:
+        step = step_oxlint(repo, scope)
+        results.append(step)
+        if "skipped" in step:
+            print("[SKIP] oxlint -> %s" % step["skipped"])
+        elif "not_run" in step:
+            # A linter that timed out or could not start is NOT a clean run.
+            # _not_run reports 0 errors, so without this branch the verdict
+            # below would read "PASS" from a scan that never happened -- the
+            # exact fail-open the not_run/unparseable split exists to prevent,
+            # reintroduced one level up.
+            print("[SKIP] oxlint -> never ran: %s" % step["not_run"])
+        elif "error" in step:
+            print("[ERROR] oxlint -> %s" % step["error"])
+            status = "FAIL"
+        else:
+            errs, warns = step["errors"], step["warnings"]
+            print("[%s] oxlint -> %d errors, %d warnings (%s, scope %s)"
+                  % ("PASS" if errs == 0 else "FAIL", errs, warns,
+                     step["scope"], step["source"]))
+            for line in step.get("sample", []):
+                print("        %s" % line)
+            if blocking == "error" and errs:
+                status = "FAIL"
+            elif blocking == "warning" and (errs + warns):
+                status = "FAIL"
+            else:
+                status = "PASS"
+
+    cfgs = find_oxlint_config(repo)
+    results.append({"step": "config", "rc": 0,
+                    "out": ("configs: %s" % _one_line(",".join(cfgs)))
+                           if cfgs else NO_OXLINT_CONFIG_HINT})
+    if not cfgs:
+        print("[WARN] config -> no oxlint config found; findings may be "
+              "false positives from no-undef (see receipt for the snippet)")
+
+    if coverage["inline_script_blocks"]:
+        print("[INFO] coverage -> %d inline <script> block(s) across %d .php "
+              "file(s) are NOT covered by oxlint"
+              % (coverage["inline_script_blocks"],
+                 coverage["files_with_inline_js"]))
+    else:
+        print("[INFO] coverage -> no inline <script> bodies in .php files")
+
+    receipt = {"tool": "guided-run js-lint", "run_id": run_id, "sha": sha,
+               "repo": repo, "status": status, "scope": scope,
+               "blocking": blocking,
+               # The version that actually ran, not the pin. Recording the
+               # pin here made the receipt assert a linter that never
+               # executed whenever the project supplied its own binary.
+               "oxlint_version": version,
+               "oxlint_source": ("project" if ready and
+                                 local_oxlint_path(repo) else
+                                 ("pinned:" + str(version) if ready
+                                  else None)),
+               "oxlint_configs": cfgs, "inline_js_coverage": coverage,
+               "results": results}
+    rdir = receipts or os.path.join(repo, "guided-receipts", run_id)
+    os.makedirs(rdir, exist_ok=True)
+    rpath = os.path.join(rdir, "js-lint.json")
+    with open(rpath, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2)
+    print("JS-LINT: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
+    return 0 if status in ("PASS", "SKIP") else 1
+
+
 AO_RELEASES = ("https://github.com/Untrivial-ai/agent-orchestrator"
                "/releases/latest")
 AO_DOCS = "https://orchestrator.inc/docs"
@@ -1255,13 +1914,14 @@ def ensure_orchestrator(repo):
     MISSING (no ao CLI -> install hint).
     """
     detail = {"hint": None, "ao_version": None, "git_ready": False}
-    rc, out = sh("git rev-parse --is-inside-work-tree", repo, timeout=30)
+    rc, out = sh(["git", "rev-parse", "--is-inside-work-tree"], repo,
+                  timeout=30)
     detail["git_ready"] = (rc == 0 and out.strip() == "true")
     if not shutil.which("ao"):
         detail["hint"] = ("%s (releases: %s, docs: %s)"
                           % (ao_install_hint(), AO_RELEASES, AO_DOCS))
         return "MISSING", detail
-    rc, out = sh("ao --version", repo, timeout=30)
+    rc, out = sh(["ao", "--version"], repo, timeout=30)
     detail["ao_version"] = out.strip()[:80] if rc == 0 else "unknown"
     if not detail["git_ready"]:
         detail["hint"] = ("AO requires a git repo for worktree isolation: "
@@ -1280,7 +1940,7 @@ def cmd_orchestrator(args):
             i += 1
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     status, detail = ensure_orchestrator(repo)
     if status == "READY":
         print("[READY] orchestrator -> ao %s, git worktree ready"
@@ -1360,7 +2020,8 @@ def mcp_handshake(cmd, cwd=None, timeout=60):
     ]
     blob = "\n".join(json.dumps(r) for r in reqs) + "\n"
     try:
-        p = subprocess.run(cmd, input=blob, capture_output=True, text=True,
+        p = subprocess.run(cmd, input=blob, capture_output=True,
+                           encoding="utf-8", errors="replace",
                            cwd=cwd, timeout=timeout)
     except (OSError, subprocess.TimeoutExpired) as e:
         return False, "spawn failed: %s" % e
@@ -1506,7 +2167,7 @@ def cmd_mcp(args):
         return print_mcp_snippet(snippet, repo)
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     status, servers = ensure_mcp(repo)
     for name, s in servers.items():
         st = s["status"]
@@ -1634,7 +2295,7 @@ def cmd_lsp(args):
         return print_lsp_snippet(snippet)
     repo = os.path.abspath(repo)
     sha = git_sha(repo)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = _run_id()
     status, detail = lsp_readiness(repo, query)
     print("[%s] lsp -> %s" % (status, detail["hint"]))
     receipt = {"tool": "guided-run lsp", "run_id": run_id,
@@ -1646,6 +2307,213 @@ def cmd_lsp(args):
     with open(rpath, "w", encoding="utf-8") as f:
         json.dump(receipt, f, indent=2)
     print("LSP: %s (sha %s)\nreceipt: %s" % (status, sha, rpath))
+    return 0
+
+
+# Install targets: tool -> skills root, relative to $HOME. skills/ is the
+# single source of truth and every installed copy must be byte-identical to
+# it. Foreign skills that merely share a root (e.g. ~/.agents/skills) are
+# deliberately ignored: a shared root is not drift.
+TOOL_SKILL_PATHS = (
+    ("kiro", os.path.join(".kiro", "skills")),
+    ("grok", os.path.join(".grok", "skills")),
+    ("opencode", os.path.join(".config", "opencode", "skills")),
+    ("zed", os.path.join(".agents", "skills")),
+)
+
+
+def _tree_digest(root):
+    """Stable sha256 over a folder: sorted (relpath, file sha256) pairs.
+
+    An unreadable file folds in a sentinel instead of raising: the gate must
+    report drift, never crash, and a file nobody can read must never hash-equal
+    a readable one.
+    """
+    root = Path(root)
+    h = hashlib.sha256()
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        h.update(path.relative_to(root).as_posix().encode("utf-8"))
+        h.update(b"\0")
+        try:
+            h.update(hashlib.sha256(path.read_bytes()).digest())
+        except OSError as exc:
+            h.update(b"\0unreadable:" + type(exc).__name__.encode("utf-8"))
+    return h.hexdigest()
+
+
+GUIDED_MANIFEST = os.path.join(".guided", "installed.json")
+
+
+def read_install_manifest(home):
+    """Guided names the installer last recorded, or [] when absent/unreadable.
+
+    The manifest is the only reliable discriminator on a shared root: it names
+    exactly what we installed, so a foreign skill is never mistaken for an
+    orphan, and a genuinely removed guided skill still gets caught.
+    """
+    path = os.path.join(home, GUIDED_MANIFEST)
+    if not os.path.isfile(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return []
+    names = data.get("skills") if isinstance(data, dict) else None
+    if not isinstance(names, list):
+        return []
+    return sorted({n for n in names if isinstance(n, str)})
+
+
+def source_skill_names(repo):
+    """(digests, invalid) for skills/. invalid = dirs carrying no SKILL.md.
+
+    Returns ([], ["<unreadable>"]) when skills/ cannot be listed, so a
+    permissions problem is reported instead of raised at the gate.
+    """
+    root = os.path.join(repo, "skills")
+    try:
+        entries = sorted(os.listdir(root))
+    except OSError as e:
+        return {}, ["<unreadable: %s>" % e]
+    digests, invalid = {}, []
+    for entry in entries:
+        folder = os.path.join(repo, "skills", entry)
+        if not os.path.isdir(folder):
+            continue
+        if os.path.isfile(os.path.join(folder, "SKILL.md")):
+            digests[entry] = _tree_digest(folder)
+        else:
+            invalid.append(entry)
+    return digests, invalid
+
+
+def sync_drift(repo, home):
+    """Diff skills/ against every installed tool path -> (status, detail)."""
+    src = os.path.join(repo, "skills")
+    if not os.path.isdir(src):
+        return "FAIL", {"error": "skills/ not found under %s" % repo}
+    sources, invalid = source_skill_names(repo)
+    recorded = read_install_manifest(home)
+    # Recorded by the installer but no longer shipped by skills/. Only drift
+    # while it still sits in a tool root; a clean removal is not a problem.
+    orphans = sorted(set(recorded) - set(sources))
+    tools, total = {}, 0
+    for tool, rel in TOOL_SKILL_PATHS:
+        dest = os.path.join(home, rel)
+        if not os.path.isdir(dest):
+            tools[tool] = {"path": dest, "state": "not-installed",
+                           "drifted": []}
+            continue
+        rows = []
+        for name, digest in sources.items():
+            folder = os.path.join(dest, name)
+            if not os.path.isdir(folder):
+                state = "missing"
+            elif _tree_digest(folder) != digest:
+                state = "stale"
+            else:
+                state = "up-to-date"
+            rows.append({"skill": name, "state": state})
+        for name in orphans:
+            if os.path.isdir(os.path.join(dest, name)):
+                rows.append({"skill": name, "state": "orphaned"})
+        bad = [r["skill"] for r in rows if r["state"] != "up-to-date"]
+        total += len(bad)
+        tools[tool] = {"path": dest, "state": "checked",
+                       "drifted": bad, "skills": rows}
+    total += len(invalid)
+    if invalid:
+        hint = ("add a SKILL.md to %s, or delete the stray directory"
+                % ", ".join("skills/" + n for n in invalid))
+    elif total:
+        hint = "run install.ps1 -Target all (or ./install.sh) to resync"
+    else:
+        hint = "every installed tool path matches skills/"
+    detail = {"source": src, "skills": len(sources), "drifted": total,
+              "invalid": invalid, "orphans": orphans,
+              "manifest": os.path.join(home, GUIDED_MANIFEST),
+              "recorded": recorded, "tools": tools, "hint": hint}
+    return ("PASS" if not total else "FAIL"), detail
+
+
+def cmd_sync(args):
+    repo, home, receipts = ".", os.path.expanduser("~"), None
+    i = 0
+    while i < len(args):
+        if args[i] == "--check":
+            i += 1
+        elif args[i] == "--repo" and i + 1 < len(args):
+            repo, i = args[i + 1], i + 2
+        elif args[i] == "--home" and i + 1 < len(args):
+            home, i = args[i + 1], i + 2
+        elif args[i] == "--receipts" and i + 1 < len(args):
+            receipts, i = args[i + 1], i + 2
+        else:
+            print("unknown option for sync: %s" % args[i])
+            return 1
+    repo = os.path.abspath(repo)
+    status, detail = sync_drift(repo, home)
+    if "error" in detail:
+        print("[FAIL] sync -> %s" % detail["error"])
+        return 1
+    for tool, info in detail["tools"].items():
+        if info["state"] == "not-installed":
+            print("  %-10s not-installed %s" % (tool, info["path"]))
+            continue
+        for row in info["skills"]:
+            if row["state"] != "up-to-date":
+                print("  %-10s %-12s %s"
+                      % (tool, row["state"], row["skill"]))
+        if not info["drifted"]:
+            print("  %-10s ok           %d skills"
+                  % (tool, len(info["skills"])))
+    for name in detail["invalid"]:
+        print("  %-10s %-12s %s (no SKILL.md)" % ("repo", "invalid", name))
+    if not detail["recorded"] and not detail["invalid"]:
+        print("  note        no %s yet, so orphan detection is off; "
+              "the installer writes it" % GUIDED_MANIFEST)
+    print("[%s] sync -> %s" % (status, detail["hint"]))
+    run_id = _run_id()
+    rdir = os.path.join(receipts or os.path.join(repo, "guided-receipts"),
+                        run_id)
+    os.makedirs(rdir, exist_ok=True)
+    rpath = os.path.join(rdir, "sync.json")
+    with open(rpath, "w", encoding="utf-8") as f:
+        json.dump({"tool": "guided-run sync", "run_id": run_id,
+                   "sha": git_sha(repo), "repo": repo, "home": home,
+                   "status": status, "details": detail}, f, indent=2)
+    print("SYNC: %s (%d drifted)\nreceipt: %s"
+          % (status, detail["drifted"], rpath))
+    return 0 if status == "PASS" else 1
+
+
+def cmd_record_install(args):
+    """Write ~/.guided/installed.json: the guided names the installer shipped.
+
+    Both installers call this, so the manifest cannot drift between platforms.
+    """
+    repo, home, i = ".", os.path.expanduser("~"), 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            repo, i = args[i + 1], i + 2
+        elif args[i] == "--home" and i + 1 < len(args):
+            home, i = args[i + 1], i + 2
+        else:
+            print("unknown option for record-install: %s" % args[i])
+            return 1
+    repo = os.path.abspath(repo)
+    if not os.path.isdir(os.path.join(repo, "skills")):
+        print("[FAIL] record-install -> skills/ not found under %s" % repo)
+        return 1
+    names, _ = source_skill_names(repo)
+    path = os.path.join(home, GUIDED_MANIFEST)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"version": 1, "skills": sorted(names),
+                   "recorded": datetime.now(timezone.utc).isoformat()},
+                  f, indent=2)
+    print("OK  manifest -> %s (%d skills)" % (path, len(names)))
     return 0
 
 
@@ -1664,17 +2532,23 @@ def main():
         return cmd_growth(rest)
     if cmd == "php-audit":
         return cmd_php_audit(rest)
+    if cmd == "js-lint":
+        return cmd_js_lint(rest)
     if cmd == "orchestrator":
         return cmd_orchestrator(rest)
     if cmd == "mcp":
         return cmd_mcp(rest)
     if cmd == "lsp":
         return cmd_lsp(rest)
+    if cmd == "sync":
+        return cmd_sync(rest)
+    if cmd == "record-install":
+        return cmd_record_install(rest)
     if cmd == "init":
         return cmd_init(rest)
     print("unknown command: %s "
-          "(validate-plan|verify|react-doctor|growth|php-audit|"
-          "orchestrator|mcp|lsp|init)" % cmd)
+          "(validate-plan|verify|react-doctor|growth|php-audit|js-lint|"
+          "orchestrator|mcp|lsp|sync|record-install|init)" % cmd)
     return 1
 
 

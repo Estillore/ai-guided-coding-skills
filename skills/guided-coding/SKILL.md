@@ -227,7 +227,8 @@ Zed discovers them automatically. The agent sees the skill catalog (name + descr
 **How to use**
 - Invoke with `/guided-coding` or `@guided-coding` (or ask “use the guided-coding skill”).
 - Automation contract: AI applies the complete minimal solution directly and reports evidence.
-- Project memory: prefer updating `AGENTS.md` (Zed reads personal `~/.config/zed/AGENTS.md` and project `AGENTS.md` / `CLAUDE.md`) or `.grok/project-memory.md`.
+- Project memory: prefer updating `AGENTS.md`. Personal file: `%APPDATA%\Zed\AGENTS.md` on Windows, `~/.config/zed/AGENTS.md` on macOS/Linux. Project file: `AGENTS.md` or `CLAUDE.md` in the worktree. Fallback: `.grok/project-memory.md`.
+- Agent profiles: a profile is a tool set plus a default model and carries **no prompt**, so it cannot hold the guided contract on its own. Pair the read-only `Guided Plan` / `Guided Buddy` profiles (`agents/zed/profiles.snippet.jsonc`) with the matching slash command.
 
 **Note**  
 Zed Skills apply to the native Zed Agent. External Agents and Terminal Threads may use their own skill/instruction systems.

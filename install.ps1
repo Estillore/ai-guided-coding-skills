@@ -21,6 +21,7 @@ $Skills = Join-Path $Root "skills"
 $Scripts = Join-Path $Root "scripts"
 $AgentsDir = Join-Path $Root "agents"
 $Steering = Join-Path $Root "steering\ponytail.md"
+$ZedProfiles = Join-Path $Root "agents\zed\profiles.snippet.jsonc"
 
 if (-not (Test-Path $Skills)) {
     Write-Error "skills/ not found. Run this script from the ai-guided-coding-skills repo."
@@ -72,6 +73,10 @@ function Install-Zed {
     $dest = Join-Path $HOME ".agents\skills"
     Copy-SkillsTo $dest
     Write-Host "OK  Zed      -> $dest  (Agent Skills standard)"
+    if (Test-Path $ZedProfiles) {
+        Write-Host "    profiles -> $ZedProfiles"
+        Write-Host "               paste into Zed settings (agent.profiles), then restart Zed"
+    }
 }
 
 Write-Host "Installing guided skills (target: $Target)..."
@@ -109,4 +114,29 @@ switch ($Target) {
 }
 
 Write-Host ""
+Write-Host "Verifying installed skills against skills\ ..."
+$Verify = Join-Path $GuidedHome "guided_run.py"
+$Drift = $false
+if (-not (Test-Path $Verify)) {
+    Write-Host "SKIP  harness missing at $Verify. Run: python ~/.guided/scripts/guided_run.py sync --check"
+} elseif (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Host "SKIP  python not on PATH. Run: python ~/.guided/scripts/guided_run.py sync --check"
+} else {
+    # Capture then echo: native stdout and Write-Host interleave out of order,
+    # which would print "Done" before its own evidence.
+    $out = & python $Verify record-install --repo $Root 2>&1
+    $rc = $LASTEXITCODE
+    $out | ForEach-Object { Write-Host $_ }
+    if ($rc -ne 0) { $Drift = $true }
+    $out = & python $Verify sync --check --repo $Root 2>&1
+    $rc = $LASTEXITCODE
+    $out | ForEach-Object { Write-Host $_ }
+    if ($rc -ne 0) { $Drift = $true }
+}
+
+Write-Host ""
+if ($Drift) {
+    Write-Host "Done, but the sync check FAILED. Fix the cause above (stale skills, or a broken python) and re-run." -ForegroundColor Yellow
+    exit 1
+}
 Write-Host "Done. Restart your tool (or open a new chat), then run: /guided-coding"

@@ -1,0 +1,93 @@
+// Guided family agent profiles for Zed.
+//
+// Paste into Settings -> Open Settings File (or `zed: open settings file`)
+// INSIDE the existing "agent" object; do not replace your whole settings file.
+//
+//   Windows : %APPDATA%\Zed\settings.json
+//   macOS   : ~/.config/zed/settings.json
+//   Linux   : ~/.config/zed/settings.json (or $XDG_CONFIG_HOME/zed/settings.json)
+//
+// A profile is a TOOL SET plus a default model. It carries no prompt, so it
+// cannot hold the guided contract by itself -- that lives in the skills under
+// ~/.agents/skills. Pair them:
+//
+//   profile "Guided Plan"  +  /guided-plan   in the message editor
+//   profile "Guided Buddy" +  /guided-buddy  in the message editor
+//
+// Both profiles below are read-only: they cannot edit, write, move, delete, or
+// run a terminal command. That is the mechanical half of the plan/coach
+// contract; the skill is the behavioral half.
+//
+// guided-buddy is named "(read-only)" on purpose. Its Recall and Coach rungs
+// need nothing else, but Pair and Delegate let the AI implement a bounded
+// slice (skills/guided-buddy/SKILL.md). Switch to the built-in Write profile
+// for those two rungs -- a deliberate mode switch, which matches the skill's
+// "the human owns the contract" ownership rule.
+//
+// "Guided Coding" is intentionally absent: Zed's built-in Write profile already
+// has exactly the tool set that needs.
+//
+// Profiles apply to the Zed Agent only. External Agent threads (e.g. the
+// OpenCode ACP bridge) ignore agent.profiles.
+"agent": {
+  "profiles": {
+    "guided_plan": {
+      "name": "Guided Plan",
+      "tools": {
+        "apply_code_action": false,
+        "ask_user": true,
+        "copy_path": false,
+        "create_directory": false,
+        "create_thread": true,
+        "delete_path": false,
+        "diagnostics": true,
+        "edit_file": false,
+        "fetch": true,
+        "find_path": true,
+        "find_references": true,
+        "get_code_actions": true,
+        "go_to_definition": true,
+        "grep": true,
+        "list_agents_and_models": true,
+        "list_directory": true,
+        "move_path": false,
+        "read_file": true,
+        "rename_symbol": false,
+        "search_web": true,
+        "skill": true,
+        "spawn_agent": true,
+        "terminal": false,
+        "write_file": false
+      }
+    },
+    "guided_buddy": {
+      "name": "Guided Buddy (read-only)",
+      "tools": {
+        "apply_code_action": false,
+        "ask_user": true,
+        "copy_path": false,
+        "create_directory": false,
+        "create_thread": true,
+        "delete_path": false,
+        "diagnostics": true,
+        "edit_file": false,
+        "fetch": true,
+        "find_path": true,
+        "find_references": true,
+        "get_code_actions": true,
+        "go_to_definition": true,
+        "grep": true,
+        "list_agents_and_models": true,
+        "list_directory": true,
+        "move_path": false,
+        "read_file": true,
+        "rename_symbol": false,
+        "search_web": true,
+        "skill": true,
+        "spawn_agent": false,
+        "terminal": false,
+        "write_file": false
+      }
+    }
+  }
+}

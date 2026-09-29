@@ -160,6 +160,37 @@ When the code under review is a PHP project, deterministic auditor evidence feed
    - Respect the repo's configs (`phpstan.neon`, `psalm.xml`, `pint.json`, `rector.php`, `deptrac.yaml`, baselines); never re-implement auditor rules here — consume the receipt JSON.
    - Interactive complement (optional, never evidence): if PHP MCPs are registered (`guided_run.py mcp`), the agent may call `phpstan_analyze` / `phpcs_check` / Boost tools mid-review for exploration. MCP output is a lead — only harness receipts and re-run tool output enter the report.
 
+## JS lane (oxlint evidence — external tool, never bundled)
+
+When the code under review ships JavaScript assets — including vanilla-PHP projects whose page scripts are externalized to `.js` for CSP — deterministic linter evidence feeds the review. The skill stays the judge:
+
+1. **Detect** — any `.js` / `.mjs` / `.cjs` asset. None → skip this lane, one line at most.
+2. **Scan via the harness** (uses the project's own oxlint when it has one, else the pinned npx download; never installs into the project; never runs `--fix`; degrades gracefully offline):
+   `python ~/.guided/scripts/guided_run.py js-lint --repo <dir> --scope full --blocking error`
+   - `SKIP` (no JS / no Node / below the 20.19+ / 22.12+ floor / offline / the repo ships an evaluable oxlint config) → continue skill-only, note why in one line. A `SKIP` from the `ensure` step means the scan did not run; never restate it as a clean result.
+   - Findings map to severity: oxlint `error` → CRITICAL/HIGH pipeline (auto-fix), `warning` → MEDIUM/LOW follow-ups — each still passes the confidence gate above before reporting.
+   - **Never `--fix` from the review lane.** The receipt prints the fix hint; the agent applies the change deliberately, then re-runs the gate. A review that silently rewrote code is not a review.
+   - Respect the repo's `.oxlintrc.*` / `oxlint.config.*`; never re-implement oxlint rules here — consume the receipt JSON.
+3. **Coverage honesty** — read `inline_js_coverage` from the receipt. oxlint lints `.js/.mjs/.cjs` plus the `<script>` blocks of `.vue/.svelte/.astro`; a script body inside a `.php` template is invisible to it. A non-zero `inline_script_blocks` is a **roadmap item, not a review finding**: recommend `guided-refactoring` to externalize those blocks so the next change to them is actually gated. Do not report it as a defect in the code under review.
+
+### Config gotcha (do not get this wrong)
+
+Absent config, `no-undef` is a default-on correctness rule and fires on `document`, `window`, `setInterval` — every finding is then a false positive. The minimal correct `.oxlintrc.json` for a browser-targeted PHP project:
+
+```jsonc
+{
+  "env": { "browser": true },
+  // `plugins` REPLACES the default plugin set — all four must be listed.
+  // Omitting any one silently disables its rules, including correctness ones.
+  "plugins": ["eslint", "typescript", "unicorn", "oxc"],
+  "categories": { "correctness": "error", "suspicious": "warn" }
+}
+```
+
+When the receipt's `config` step reports no config found, say so before acting on any finding, and recommend the snippet above as a follow-up.
+
+Prefer the JSON form. The npx path deliberately refuses a repo that ships `oxlint.config.ts`/`.mts` or a `jsPlugins` entry, because oxlint *evaluates* those — a repo-authored one would run code on the reviewer's machine before any diagnostic exists. That refusal is a `SKIP`, not a finding: the fix is to install oxlint as a devDependency so the project supplies its own binary, not to remove the config.
+
 ## Infrastructure diff lane (in-diff safety only)
 
 When the diff touches infra files (Dockerfile, compose, wrangler config, deploy/CI config, queue config):

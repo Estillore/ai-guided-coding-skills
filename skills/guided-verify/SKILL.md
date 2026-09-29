@@ -84,6 +84,7 @@ Run only what is relevant to the change. Typical order:
 7. **React audit (React projects only)** — `python ~/.guided/scripts/guided_run.py react-doctor --repo <dir> --scope changed --blocking error` (pinned binary auto-downloads on first use; SKIP when not React/offline → note in one line and continue). FAIL routes back to `guided-coding` like any red check; stale-green rule applies.
 8. **Growth watch (infra touched)** — when the change touched infra files (Dockerfile, compose, wrangler, migrations, queue/cron config), run `python ~/.guided/scripts/guided_run.py growth --repo <dir>`. If it recommends an audit, append 3 lines (top gaps + recommendation) and point to `guided-infra`. Cooldown: automatic runs skip when `growth.last_audit` in the repo-map is under 14 days old (explicit asks always run).
 9. **PHP audit (PHP projects only)** — `python ~/.guided/scripts/guided_run.py php-audit --repo <dir> --scope changed --blocking error` (runs only auditors the project already has; never installs; SKIP when not PHP / no php / no tools → note in one line and continue). FAIL routes back to `guided-coding` like any red check; stale-green rule applies.
+10. **JS lint (projects with .js/.mjs/.cjs assets)** — `python ~/.guided/scripts/guided_run.py js-lint --repo <dir> --scope changed --blocking error` (oxlint: project's own binary if present, else the pinned npx download; never installs into the project; never runs `--fix`; SKIP when no JS / no Node / offline / the repo ships an evaluable oxlint config → note in one line and continue). FAIL routes back to `guided-coding`. Read the `inline_js_coverage` field in the receipt: inline `<script>` bodies inside `.php` templates are invisible to oxlint, so a green run is only as complete as the externalisation rate. A `SKIP` from the `ensure` step means the scan did not run — never report that as a clean result. Also check the `config` step — without `env.browser`, the default-on `no-undef` rule cannot see `document`/`window` and every finding is a false positive.
 
 Framework-aware checks (Django, Laravel, Next.js, etc.) activate automatically when the project type is clear from memory or files.
 
@@ -121,6 +122,7 @@ When the change involves an agent, multi-step tool use, large/monorepo code, or 
    Run the relevant commands in order, capturing output for each (harness does this; manual runs must match it).
    - React projects: run the react-doctor gate (checklist item 7) alongside the ladder — its FAIL routes back to guided-coding.
    - PHP projects: run the php-audit gate (checklist item 9) alongside the ladder — its FAIL routes back to guided-coding. Registered PHP MCPs (`phpstan_analyze`, `phpcs_check`, Boost tools) may assist exploration mid-verify, but only harness receipts count as evidence.
+   - Projects with JS assets (including vanilla-PHP pages with externalized scripts): run the js-lint gate (checklist item 10) alongside the ladder — its FAIL routes back to guided-coding. Quote the `inline_js_coverage` number in the close report when it is non-zero.
    - Infra touched: run the growth watch (checklist item 8) and include its recommendation in the close report.
 
 3. **On failure (error-count rule)**
@@ -165,6 +167,7 @@ Pin the revision first: `git rev-parse --short HEAD` (or state `uncommitted` whe
    - `npm run lint` → clean
    - `react-doctor (changed)` → clean / N errors (React only)
    - `php-audit (changed)` → clean / N errors + M warnings (PHP only)
+   - `js-lint (changed)` → clean / N errors + M warnings; inline JS in .php: N blocks not covered
 
 2. Review (static findings): none / [fixed CRITICAL file:line …]
 

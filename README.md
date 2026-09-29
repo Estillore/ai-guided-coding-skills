@@ -23,14 +23,22 @@ Use `guided-buddy` when you want to learn rather than delegate the whole task. I
 |------|---------------------|--------------------|
 | **Kiro** | Skills + guided agent + Ponytail steering | `~/.kiro/skills` |
 | **Grok** | Skills | `~/.grok/skills` |
-| **OpenCode** | Skills + guided agents | `~/.config/opencode/skills` |
+| **OpenCode** | Skills + primary agents + read-only specialists | `~/.config/opencode/skills` |
 | **Zed** | Skills (Agent Skills standard) | `~/.agents/skills` |
 
 Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders work across these tools.
 
 > **Kiro extras:** `agents/*.json` (orchestrator + planner/builder/reviewer) and `steering/ponytail.md`  
-> **OpenCode extras:** `agents/opencode/*.md` — 6 primary agents (coding, refactoring, review, verify, plan, guided-buddy), per-phase permissions, no auto-chaining
+> **OpenCode extras:** `agents/opencode/*.md` — 6 primary agents plus 3 read-only specialist subagents, per-phase permissions, and no primary-agent auto-chaining
 > Grok and Zed load coaching rules from each skill’s `SKILL.md`.
+
+### OpenCode agent runtime
+
+The five guided automation modes are **Primary-agent orchestrators**, not repeated skill wrappers. Their compact agent prompts own the normal phase loop; matching skills provide **optional, on-demand skill guidance** only when an advanced mode needs more detail. `guided-buddy` remains a deliberate single-agent coaching mode.
+
+Complex work can use three **read-only specialist subagents**: `guided-architect`, `guided-tdd`, and `guided-reviewer`. OpenCode built-in `explore` handles broad repository discovery. Specialists cannot edit or recurse; the primary remains the only writer and owns final verification.
+
+After reinstalling agent files, **Quit and restart OpenCode**. Running sessions keep the configuration that was loaded at startup.
 
 ## Optional LSP retrieval
 
@@ -141,7 +149,44 @@ chmod +x install.sh
 ./install.sh both
 ```
 
-### 3. Restart & try
+### 3. Verify the install (drift gate)
+
+The installer verifies itself. `skills/` is the single source of truth and
+every tool path must be byte-identical to it:
+
+```powershell
+python ~/.guided/scripts/guided_run.py sync --check
+```
+
+```bash
+python3 ~/.guided/scripts/guided_run.py sync --check
+```
+
+It prints one line per drifted skill and exits `1` on drift. Run it any time
+you suspect a tool is running an old skill:
+
+```
+  opencode   stale        guided-buddy
+  zed        stale        guided-coding
+  zed        missing      guided-buddy
+```
+
+A tool root that does not exist yet reports `not-installed` and is not drift.
+Foreign skills that merely share `~/.agents/skills` are ignored on purpose.
+
+Two more states the gate refuses to let pass:
+
+| State | Means | Fix |
+|-------|-------|-----|
+| `invalid` | a directory in `skills/` has no `SKILL.md` | add one, or delete the directory |
+| `orphaned` | a guided skill was removed from `skills/` but still sits in a tool root | delete it from the tool root |
+
+Orphan detection needs the manifest the installer writes to
+`~/.guided/installed.json` (via `record-install`). That manifest is what lets the
+gate tell a removed guided skill apart from another agent's skill sharing the
+same root. Until it exists, `sync` says so instead of pretending to check.
+
+### 4. Restart & try
 
 1. Restart your tool (or open a new chat / agent session)
 2. Run:
@@ -213,7 +258,9 @@ Skills are the agent contract; `scripts/guided_run.py` (stdlib-only, installed t
 | `react-doctor [--repo DIR] [--scope S] [--blocking LVL]` | React-only audit lane: detects React, provisions the pinned react-doctor (auto-download on first use), scans as JSON. PASS/SKIP = 0, blocking findings = 1 |
 | `growth [--repo DIR] [--no-memory]` | Advisory infra + architecture growth scan (compose/Dockerfile gaps, Cloudflare, DB, queue, cache, storage, auth, observability, secret hygiene, layer signals). Writes `growth.json` + refreshes repo-map `infrastructure`/`growth`. Always exit 0 |
 | `php-audit [--repo DIR] [--scope full\|changed] [--blocking LVL]` | PHP audit lane: runs project-installed auditors only (phpstan JSON, pint --test, composer audit JSON, rector dry-run, deptrac JSON, psalm taint, warden JSON). Never installs anything. PASS/SKIP = 0, blocking findings = 1 |
+| `js-lint [--repo DIR] [--scope full\|changed] [--blocking LVL]` | JavaScript correctness lane: detects `.js/.mjs/.cjs`, uses the project's own oxlint if it has one, else the pinned npx download. Never installs into the project, never runs `--fix`, refuses the npx path when the repo ships an evaluable config (`oxlint.config.ts`/`jsPlugins`). Reports `inline_js_coverage` — `<script>` bodies in `.php` templates that oxlint cannot see. PASS/SKIP = 0, blocking findings = 1 |
 | `orchestrator [--repo DIR]` | External-supervision check: detects the Agent Orchestrator (`ao`) CLI + git worktree readiness. Never installs or clones. Always exit 0 |
+| `mcp [--repo DIR] [--print-snippet PLATFORM]` | PHP MCP readiness: locate each guided MCP server, handshake over stdio, list tools. `--print-snippet` emits a ready-to-paste client block with resolved paths. Never installs or clones. Always exit 0 |
 | `lsp [--repo DIR] [--query SYMBOL] [--print-snippet opencode]` | Reports OpenCode prerequisites, optionally probes a real LSP symbol response, or prints the OpenCode v1 semantic-tool config. Never reads secrets or edits config. Always exit 0 |
 | `init [--repo DIR]` | Scaffolds `docs/repo-map.json` from detected project facts |
 
@@ -225,7 +272,9 @@ python ~/.guided/scripts/guided_run.py verify --repo . --plan plan.json
 
 ## What’s new (vNext)
 
-- **Native OpenCode agents** — `agents/opencode/` ships 6 primary agents (coding, refactoring, review, verify, plan, guided-buddy): thin wrappers over the skills with per-phase permissions (plan is read-only) and no auto-chaining
+- **Install drift gate** — `guided_run.py sync --check` diffs `skills/` against all four tool paths and exits `1` on drift, so a stale Zed install can no longer hide for weeks; both installers run it automatically
+- **Zed agent profiles** — `agents/zed/profiles.snippet.jsonc` ships read-only `Guided Plan` and `Guided Buddy` profiles (Zed removed custom modes; profiles are tool sets, skills carry the contract)
+- **Native OpenCode agent orchestration** — `agents/opencode/` ships 6 primary phase agents plus 3 read-only specialists. Primaries delegate bounded discovery, test design, architecture, or review work while keeping one-writer ownership, phase permissions, and no primary-agent auto-chaining
 - **OpenCode + Zed skill text** — `guided-coding`, `guided-plan`, `guided-review`, `guided-verify`, and `guided-buddy` include native OpenCode and Zed support (install paths, agents, project memory)
 - **DeepSeek Harness as the Heart** — folded into the workflow skills (no separate skill). Harness explores and verifies; the guided skill stays the ownership layer and is never the final source of truth
 - **Large Codebase Mode** — map the relevant slice only and default blast radius to 1–3 files
@@ -269,6 +318,7 @@ Install always copies from the `skills/` folder (canonical source).
 | **OpenCode** | `%USERPROFILE%\.config\opencode\skills` | `~/.config/opencode/skills` |
 | **OpenCode** agents | `%USERPROFILE%\.config\opencode\agent` | `~/.config/opencode/agent` |
 | **Zed** | `%USERPROFILE%\.agents\skills` | `~/.agents/skills` |
+| **Zed** profiles (paste-in) | `%APPDATA%\Zed\settings.json` | `~/.config/zed/settings.json` |
 
 These folders do not conflict — you can install every tool on the same machine.
 
@@ -276,6 +326,48 @@ These folders do not conflict — you can install every tool on the same machine
 
 - OpenCode also discovers skills in `~/.agents/skills` (same path Zed uses). Installing with `-Target all` / `./install.sh` covers both native OpenCode and Zed paths.
 - Zed loads skills from `~/.agents/skills` (global) or `.agents/skills` (project).
+- Zed removed custom modes; `agent.profiles` replaced them. A profile is a
+  **tool set plus a default model** and carries no prompt, so it cannot hold
+  a guided contract by itself — pair it with the slash command. See below.
+
+---
+
+## Zed agent profiles
+
+Zed replaced custom modes with **agent profiles**. A profile is a tool set plus
+a default model — there is no `prompt` field — so a profile alone cannot carry
+the guided contract. The split is deliberate:
+
+| Layer | Surface | Carries |
+|-------|---------|---------|
+| Tool set | `agent.profiles` in Zed settings | mechanical safety (a plan cannot edit) |
+| Behavior | `/guided-plan`, `/guided-buddy` in `~/.agents/skills` | the actual contract |
+
+Install, then paste `agents/zed/profiles.snippet.jsonc` into your Zed settings inside
+the existing `"agent"` object (the file is an object fragment — do not replace
+your whole settings file):
+
+```
+Zed: zed: open settings file
+Windows  : %APPDATA%\Zed\settings.json
+macOS    : ~/.config/zed/settings.json
+```
+
+You get two read-only profiles:
+
+| Profile | Pair with | Cannot |
+|---------|-----------|--------|
+| `Guided Plan` | `/guided-plan` | edit, write, move, delete, run terminal commands |
+| `Guided Buddy (read-only)` | `/guided-buddy` | same, plus no subagent fan-out |
+
+`Guided Buddy (read-only)` covers the Recall and Coach rungs. Its **Pair** and
+**Delegate** rungs let the AI implement a bounded slice, so switch to the built-in
+**Write** profile for those — a deliberate mode switch, which is exactly what the
+skill's ownership rule asks for.
+
+`Guided Coding` is intentionally absent — Zed's built-in **Write** profile
+already has exactly the right tool set. Profiles apply to the Zed Agent only;
+External Agent threads (e.g. the OpenCode ACP bridge) ignore `agent.profiles`.
 
 ---
 
@@ -423,7 +515,7 @@ install.ps1             ← Windows installer (all tools)
 install.sh              ← macOS / Linux installer (all tools)
 skills/                 ← canonical source installed by the installers
 agents/guided*.json     ← Kiro agents: orchestrator + planner/builder/reviewer
-agents/opencode/*.md    ← OpenCode agents: coding / refactoring / review / verify / plan / guided-buddy
+agents/opencode/*.md    ← OpenCode primary agents + read-only specialists
 steering/ponytail.md    ← Kiro always-on style
 guided-*/               ← legacy mirrors; installers do not read them
 backup-old/             ← previous snapshot (reference only)

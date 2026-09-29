@@ -16,6 +16,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS="$ROOT/skills"
 AGENTS_DIR="$ROOT/agents"
 STEERING="$ROOT/steering/ponytail.md"
+ZED_PROFILES="$ROOT/agents/zed/profiles.snippet.jsonc"
 
 if [[ ! -d "$SKILLS" ]]; then
   echo "Error: skills/ not found. Run this script from the ai-guided-coding-skills repo." >&2
@@ -58,6 +59,10 @@ install_zed() {
   # Agent Skills open standard (Zed + also read by OpenCode)
   copy_skills "$HOME/.agents/skills"
   echo "OK  Zed      -> $HOME/.agents/skills  (Agent Skills standard)"
+  if [[ -f "$ZED_PROFILES" ]]; then
+    echo "    profiles -> $ZED_PROFILES"
+    echo "               paste into Zed settings (agent.profiles), then restart Zed"
+  fi
 }
 
 echo "Installing guided skills (target: $TARGET)..."
@@ -98,5 +103,26 @@ case "$TARGET" in
     ;;
 esac
 
+DRIFT=0
+VERIFY="$HOME/.guided/scripts/guided_run.py"
+if [[ ! -f "$VERIFY" ]]; then
+  echo ""
+  echo "SKIP  harness missing at $VERIFY. Run: python3 ~/.guided/scripts/guided_run.py sync --check"
+elif ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+  echo ""
+  echo "SKIP  python3 not on PATH. Run: python3 ~/.guided/scripts/guided_run.py sync --check"
+else
+  PY=python3
+  command -v python3 >/dev/null 2>&1 || PY=python
+  echo ""
+  echo "Verifying installed skills against skills/ ..."
+  "$PY" "$VERIFY" record-install --repo "$ROOT" || DRIFT=1
+  "$PY" "$VERIFY" sync --check --repo "$ROOT" || DRIFT=1
+fi
+
 echo ""
+if [[ "$DRIFT" -ne 0 ]]; then
+  echo "Done, but the sync check FAILED. Fix the cause above (stale skills, or a broken python3) and re-run." >&2
+  exit 1
+fi
 echo "Done. Restart your tool (or open a new chat), then run: /guided-coding"
