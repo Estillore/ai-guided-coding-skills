@@ -67,7 +67,7 @@ Recommend `guided-refactoring` after coding, then stop. Do not auto-chain. Harne
 
 ## Project Memory (self-regenerative)
 
-Read `docs/guided-memory.md` when it exists and treat it as ground truth. Create it when the first high-value fact appears. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+If `AGENTS.md` exists, update its `## Guided` section and do not create `docs/guided-memory.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent.
 
 **Self-regeneration rule**  
 After any meaningful discovery (new entry points, layer rules, dependency direction, important convention, or gotcha), update `docs/guided-memory.md`. Keep entries short. High-value facts (framework + version, structure style, source of standards) can be written without confirmation.
@@ -138,7 +138,7 @@ OpenCode discovers them automatically. Agents see available skills and load them
 
 **Pairing with OpenCode primary agents**
 
-Use `guided-coding` for implementation. Use `guided-plan` before a non-trivial change, `guided-review` after it, and `guided-verify` for the evidence pass. Ask `guided-test-design` for the RED case, then write the test and run it in this primary. Each phase stops. The human switches agents. Record facts in `docs/guided-memory.md`.
+Use `guided-coding` for implementation. Use `guided-plan` before a non-trivial change, `guided-review` after it, and `guided-verify` for the evidence pass. Ask `guided-test-design` for the RED case, then write the test and run it in this primary. Each phase stops. The human switches agents. Record facts in the `## Guided` section of `AGENTS.md`. Fall back to `docs/guided-memory.md` only when `AGENTS.md` is absent.
 
 ## Zed support
 
@@ -268,7 +268,18 @@ If the repo matches `docs/vanilla-php.md`, follow that file before any generic f
 
 ## Modes
 
-### 1. Strong TDD mode (preferred for new behavior and bug fixes)
+### 0. Vanilla PHP mode (wins over React and TDD)
+
+Use this when the repo is page scripts, includes, and no React app. Do not apply the React, Next.js, or coverage path.
+
+- Trace `php.call` before editing. Missing trace stops the edit.
+- Fix the callee in the shared include, not the page that rendered the symptom.
+- Evidence is `php -l` plus `php.repro`. Do not invent PHPUnit.
+- Record the trace in the `## Guided` section of `AGENTS.md`.
+- React mode stays for a real React or Next app. It is not the default on a `.php` tree.
+
+### 1. Strong TDD mode (preferred for new behavior and bug fixes when a test runner exists)
+
 
 Activate when the user says “TDD”, “red-green”, “test first”, “coverage”, or when the task is clearly a new behavior or bug fix that can be expressed as a test.
 

@@ -108,7 +108,7 @@ Shell access on that agent is an inspection allowlist.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-plan` or `@guided-plan` on the Guided Plan profile. On the Zed Guided Plan profile, deliver the plan in chat and stop. That profile cannot write files or run a terminal, so it does not run validate-plan. Record facts in `docs/guided-memory.md` only after the human switches to a profile that can write.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-plan` or `@guided-plan` on the Guided Plan profile. On the Zed Guided Plan profile, deliver the plan in chat and stop. That profile cannot write files or run a terminal, so it does not run validate-plan. Record facts in `AGENTS.md` only after the human switches to a profile that can write. Fall back to `docs/guided-memory.md` only when `AGENTS.md` is absent.
 
 ## Documentation is Truth (highest priority for every recommendation)
 
@@ -149,7 +149,7 @@ Record the chosen source of standards in project memory. When Harness is recomme
 
 1. **AI outputs the complete minimal plan and stops. This rule is absolute.**
    - Present a full short plan, including structure and key decisions.
-   - Update `docs/guided-memory.md`.
+   - Update the `## Guided` section of `AGENTS.md`. Fall back to `docs/guided-memory.md` only when `AGENTS.md` is absent.
    - When the host can write `docs/plans/*.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`.
    - Stop after the plan. Do not implement and do not invoke another guided phase. Recommend `guided-coding` or `guided-refactoring`, then stop.
 
