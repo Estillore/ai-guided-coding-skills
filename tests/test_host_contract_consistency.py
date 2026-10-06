@@ -134,7 +134,7 @@ class HostContractConsistencyTest(unittest.TestCase):
 
     def test_plan_agent_keeps_memory_and_portable_validator(self):
         text = read("agents/opencode/guided-plan.md")
-        self.assertIn('"docs/guided-memory.md": allow', text)
+        self.assertIn('"AGENTS.md": allow', text)
         self.assertIn("py -3", text)
         self.assertIn("python3", text)
         self.assertIn("Do not implement", text)
@@ -182,6 +182,33 @@ class HostContractConsistencyTest(unittest.TestCase):
                 self.assertIn("**Required**", scenarios)
                 self.assertIn("**Forbidden**", scenarios)
 
+
+    def test_php_trace_and_plan_gate(self):
+        import subprocess
+        import json
+        repo = ROOT
+        fixture = repo / "tests" / "fixtures" / "vanilla-php"
+        trace = subprocess.run(
+            ["python3", "scripts/guided_run.py", "php-trace", "--repo", str(fixture), "--entry", "login.php"],
+            cwd=repo, capture_output=True, text=True)
+        self.assertIn("PHP TRACE: PASS", trace.stdout)
+        self.assertIn("login.php", trace.stdout)
+        self.assertIn("auth.php", trace.stdout)
+        plan = repo / "tests" / "fixtures" / "plan-no-call.json"
+        plan.write_text(json.dumps({
+            "goal": "fix login",
+            "blast_radius": {"files": ["login.php"]},
+            "steps": [{"file": "login.php", "action": "fix"}],
+            "test_strategy": ["php -l"],
+            "invariants": [],
+            "done_criteria": ["blank page gone"],
+            "accuracy": "repro",
+        }))
+        bad = subprocess.run(
+            ["python3", "scripts/validate-plan.py", str(plan)],
+            cwd=repo, capture_output=True, text=True)
+        self.assertIn("PLAN IR: FAIL", bad.stdout)
+        self.assertIn("php_call", bad.stdout)
 
 if __name__ == "__main__":
     unittest.main()

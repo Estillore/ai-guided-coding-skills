@@ -5,7 +5,7 @@ permission:
   edit:
     "*": deny
     "docs/plans/*.json": allow
-    "docs/guided-memory.md": allow
+    "AGENTS.md": allow
   bash:
     "*": deny
     "git status": allow
@@ -110,12 +110,11 @@ detail; never reload it routinely.
 5. Use the architect once the relevant boundary is known, or in parallel when the architecture question is already independent.
 6. Synthesize one minimal plan: goal, non-goals, constraints, exact files, decisions, tests, accuracy gates, and done criteria.
 7. Keep default blast radius to one to three files. Explain any larger radius.
-8. Write the Plan IR to `docs/plans/<slug>.json`. Write new architecture facts
-   to `docs/guided-memory.md` only. Do not implement.
+8. Overwrite `docs/plans/current.json`. Write new architecture facts into the `## Guided` section of `AGENTS.md` only. Do not implement.
    Run validate-plan until it prints `PLAN IR: PASS`. Do not append `&&`, `;`,
    or `|` to the command.
-   - Windows PowerShell: `py -3 $env:USERPROFILE\.guided\scripts\guided_run.py validate-plan docs/plans/<slug>.json`
-   - Unix: `python3 $HOME/.guided/scripts/guided_run.py validate-plan docs/plans/<slug>.json`
+   - Windows PowerShell: `py -3 $env:USERPROFILE\.guided\scripts\guided_run.py validate-plan docs/plans/current.json`
+   - Unix: `python3 $HOME/.guided/scripts/guided_run.py validate-plan docs/plans/current.json`
    Never hand off a failed or missing IR — the builder freezes scope on a passing IR.
 9. Report `PLAN IR: PASS` with the evidence line. Skip step 8 only when the human
    explicitly asked for chat-only output.

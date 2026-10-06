@@ -102,7 +102,7 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 
 **Pairing with OpenCode agents**
 
-Select the `guided-plan` primary. It may write `docs/plans/*.json` and `docs/guided-memory.md`. It does not edit source. When the plan is done, tell the human to switch to `guided-coding`. Then stop.
+Select the `guided-plan` primary. It may overwrite `docs/plans/current.json` and the `## Guided` section of `AGENTS.md`. Do not create another plan file. It does not edit source. When the plan is done, tell the human to switch to `guided-coding`. Then stop.
 
 Shell access on that agent is an inspection allowlist.
 
@@ -304,7 +304,7 @@ This mode exists to keep the AI in the assistant seat and the human as the owner
    Choose Short (default), Architecture, Full, or **Human Design Support** mode as appropriate. Apply Ponytail ruthlessly.  
    When the human already has a design, prefer Human Design Support mode.
 5. **Apply it + Plan IR gate (mandatory)**
-   Save the final plan to memory. Emit the Plan IR as JSON to `docs/plans/<slug>.json` matching `references/plan-schema.json` (shape example: `examples/plan-ir.example.json — structural reference only, never copy its facts`) and run the validator:
+   Save the final plan to memory. Overwrite `docs/plans/current.json` matching `references/plan-schema.json` (shape example: `examples/plan-ir.example.json — structural reference only, never copy its facts`) and run the validator:
    `python ~/.guided/scripts/guided_run.py validate-plan docs/plans/<slug>.json` (harness entry; raw script lives at `scripts/` in the skills repo).
    When the host can write `docs/plans/*.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`. `guided-builder` must not start on a FAIL, and never on a missing IR.
    On the Zed Guided Plan profile, deliver the plan in chat and stop. That profile cannot write files or run a terminal, so it does not run validate-plan.

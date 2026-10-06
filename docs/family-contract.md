@@ -36,7 +36,18 @@ SKIP is allowed only when the host cannot run the command. Say which host limit 
 
 ## Memory
 
-Read `docs/guided-memory.md` when it exists. Update it after a real discovery. If `AGENTS.md` exists and has no pointer, add one line naming `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+Update `AGENTS.md` in place. Replace the `## Guided` section. Do not create `docs/guided-memory.md` when `AGENTS.md` exists.
+
+## File budget
+
+OpenCode and Zed already load `AGENTS.md`. Update that file in place. Do not create `docs/guided-memory.md`, `docs/project-notes/`, or a new `docs/plans/<slug>.json` per pass.
+
+Write at most:
+
+- `AGENTS.md` — framework, entry, `php.call`, decisions, gotchas. Replace the `## Guided` section. Do not append a second one.
+- `docs/plans/current.json` — only when validate-plan must run. Overwrite it. Delete nothing else.
+
+The plan in chat is the deliverable. The JSON is the gate, not a document.
 
 ## Vanilla PHP
 

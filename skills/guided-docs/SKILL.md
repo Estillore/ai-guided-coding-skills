@@ -74,7 +74,7 @@ Only record what will still be useful next week. Prune ruthlessly.
 
 ## Repo-map artifact (grounds every later phase)
 
-After mapping a project, emit/update `docs/repo-map.json` (fallback: `.kiro/repo-map.json` or `.grok/repo-map.json`) matching `references/repo-map-schema.json`: framework + version, entry points, domains, dependency direction, structure style, conventions, gotchas, and the real test commands. Every later phase (plan, coding, review, verify) loads this file instead of re-discovering. Update it when the architecture changes.
+After mapping a project, update the `## Guided` section of `AGENTS.md`. Do not emit a new doc. Optional single `docs/repo-map.json` only if a later gate reads it (fallback: `.kiro/repo-map.json` or `.grok/repo-map.json`) matching `references/repo-map-schema.json`: framework + version, entry points, domains, dependency direction, structure style, conventions, gotchas, and the real test commands. Every later phase (plan, coding, review, verify) loads this file instead of re-discovering. Update it when the architecture changes.
 
 
 ## Vanilla PHP (page scripts, no framework)

@@ -1,0 +1,1 @@
+{"goal": "fix login", "blast_radius": {"files": ["login.php"]}, "steps": [{"file": "login.php", "action": "fix"}], "test_strategy": ["php -l"], "invariants": [], "done_criteria": ["blank page gone"], "accuracy": "repro"}
