@@ -188,6 +188,8 @@ A `?r=` router is vanilla PHP. Follow the router standard in `docs/vanilla-php.m
 
 On a mixed router, the bugfix also extracts this case only: SQL to the service, markup to the view, case becomes a call. Do not rewrite the rest of the switch.
 
+If the view uses Bootstrap, keep that major version. Reuse `data-bs-*` and the vendored asset. Do not add a CDN, a second bundle, or Bootstrap 4 attributes. Do not add Bootstrap to a print view the project keeps free.
+
 ## Semantic retrieval (capability-aware)
 
 - Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.

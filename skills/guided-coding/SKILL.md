@@ -427,6 +427,13 @@ Examples of stacks this mode supports:
 - Reuse existing partials, components, or helpers instead of inventing new ones.
 - Never introduce a new UI library or CSS framework unless the human explicitly asks.
 
+**Bootstrap (when the project already uses it)**
+
+- Detect the major version from the vendored CSS/JS or `AGENTS.md`. Follow that version's docs (`https://getbootstrap.com/docs/5.3/` for 5.3).
+- Reuse the vendored files. No CDN if the project already vendors Bootstrap or forbids a CDN.
+- Prefer existing components and `data-bs-*` over custom CSS. One bundle. Do not double-init.
+- Do not add Bootstrap to a print or receipt view the project keeps Bootstrap-free.
+
 The same Strong TDD / show-complete-solution workflow is used; the solutions simply follow the real frontend stack of the project.
 
 ### 4. Normal mode

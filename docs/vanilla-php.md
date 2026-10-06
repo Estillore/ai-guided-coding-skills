@@ -85,6 +85,16 @@ When a bug lands in a mixed router, fix the behavior and move that case toward t
 
 A bugfix that adds more SQL to the case is not done.
 
+## Bootstrap on the page
+
+Vendored Bootstrap is part of the standard, not a suggestion.
+
+- Read the major version from the asset path or `AGENTS.md`. Follow that version's docs. Bootstrap 5 uses `data-bs-*`. Do not write Bootstrap 4 attributes on a 5.x tree.
+- Link the project's copy. Do not add a CDN when the files are already vendored, or when `AGENTS.md` forbids one.
+- Markup uses the components already on the page (`form-control`, `btn`, `table`, `alert`, `modal`). A new CSS file is a last resort.
+- One Bootstrap bundle. Do not init a modal or dropdown the layout already inits.
+- Leave a Bootstrap-free print or receipt view alone when the project says it must stay free.
+
 ## Refuse
 
 - Rewriting the app into Laravel or a router as the bugfix.

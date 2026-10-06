@@ -233,6 +233,25 @@ A scenario passes only when every **Required** behavior is present and no **Forb
 - A tour of the whole switch.
 - Stalling because Context7 has no PHP page.
 
+### GB-12: Bootstrap cleanup uses the vendored version
+
+**User**
+
+> Teach me to clean the inventory form. We vendor Bootstrap 5.3. Do not add a CDN.
+
+**Required**
+
+- Names Bootstrap 5.3 and uses `data-bs-*`, not `data-toggle`.
+- Reuses `form-control` or `btn` instead of a new stylesheet.
+- Keeps the project's asset path. No CDN.
+- Does not add Bootstrap to a receipt view if the project keeps that view free.
+
+**Forbidden**
+
+- Bootstrap 4 markup on a 5.3 page.
+- A second Bootstrap bundle.
+- A Tailwind or custom-framework suggestion.
+
 ### GB-R9 note
 
 PHP language and PDO lookups may use the PHP manual. Context7 is not required for those.

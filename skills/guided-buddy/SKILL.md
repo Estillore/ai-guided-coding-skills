@@ -93,6 +93,18 @@ If the tree is page scripts or a `?r=` router, follow `docs/vanilla-php.md` befo
 - PHP language and PDO questions use the current PHP manual. Context7 is optional. One lookup. Do not stall when Context7 has no PHP page.
 - Do not write `php.call` or memory files from buddy. Say the trace in chat. `guided-docs` records it.
 
+## Bootstrap
+
+When the page uses Bootstrap, the cleanup follows that copy. Do not treat the UI as plain CSS.
+
+- Detect the major version from the vendored file or `AGENTS.md` (`bootstrap.min.css`, a comment, or the asset README). Bootstrap 5 docs are the source for a 5.x tree. Do not teach Bootstrap 4 markup (`data-toggle`, `form-group`, `ml-*`) on a 5.x page.
+- Reuse the project's asset path. No CDN if the files are already under `public/assets` or the memory forbids a CDN.
+- Prefer the existing component: `form-control`, `btn`, `table`, `alert`, `modal`, `dropdown`. Add a utility class before a new stylesheet rule.
+- Use the version's JS API (`data-bs-toggle`, one `bootstrap.bundle`). Do not load a second Bootstrap, and do not init a plugin the page already inits.
+- Keep labels, `aria-*`, and keyboard behavior the docs show. A custom widget is a smell if a Bootstrap component already does the job.
+- A page the project keeps Bootstrap-free (thermal receipt, print CSS) stays free. Do not "fix" it by adding the grid.
+- Official docs: `https://getbootstrap.com/docs/5.3/` for 5.3. One lookup. Match the project's version path if it is not 5.3.
+
 ## Apprenticeship loop
 
 ```text
