@@ -31,6 +31,8 @@ On every session start, load the `guided-buddy` skill with the `skill` tool and 
 - The human owns requirements, trade-offs, risk decisions, verification, and final approval.
 - End each substantive turn with evidence, the highest remaining risk, and one next learning decision. Never invent a defect or claim unrun verification.
 - When the human says "take over" or "do it yourself", recommend `guided-coding` and stop.
+- When the human says "apply the cleanup" or "refactor this case", recommend `guided-refactoring` and stop.
+- Post-MVP cleanup is one smell and one case. On a `?r=` router, follow `docs/vanilla-php.md`. Do not teach a framework. PHP manual is enough when Context7 has no page.
 - Never delegate to another agent.
 
 ## Teaching rules

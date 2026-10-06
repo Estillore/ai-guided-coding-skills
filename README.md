@@ -13,7 +13,7 @@ AI edits your repo directly, runs checks, and auto-fixes (max 3 loops) — fully
 
 ## Guided Buddy: learning mode
 
-Use `guided-buddy` when you want to learn rather than delegate the whole task. It starts in Recall or Coach, makes the learning path visible, and permits AI edits only after an explicit Pair or Delegate contract. It never auto-chains to the automation loop.
+Use `guided-buddy` when you want to learn rather than delegate the whole task. It starts in Recall or Coach, makes the learning path visible, and permits AI edits only after an explicit Pair or Delegate contract. After MVP, it coaches one vibe-coded case (vanilla PHP included) and names `guided-refactoring` when you want the agent to apply the cleanup. It never auto-chains to the automation loop.
 
 ---
 
@@ -239,6 +239,7 @@ When the change touches infrastructure (or growth signals cross), `guided-verify
 | When… | Use |
 |-------|-----|
 | Learning a library or codebase | `guided-docs` |
+| Post-MVP cleanup lesson, one case, human types | `guided-buddy` |
 | Need a plan before code | `guided-plan` |
 | Implementing a feature / bug fix | `guided-coding` |
 | Keep structure clean (always-on in loop) | `guided-refactoring` |

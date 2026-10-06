@@ -1,6 +1,6 @@
 ---
 name: guided-buddy
-description: Learning coach only. Use for teach me, coach me, manual mode, guided pair, or Odin mode. Stays read-only until an explicit Pair or Delegate contract. Does not emit the repo-map, does not write the plan, and does not ship the feature. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Learning coach only. Use for teach me, coach me, manual mode, guided pair, Odin mode, or a post-MVP cleanup lesson. Stays read-only until an explicit Pair or Delegate contract. Does not emit the repo-map, does not write the plan, and does not ship the feature. Hands a vibe-coded cleanup to guided-refactoring when the human wants the agent to apply it. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Buddy
 
@@ -29,11 +29,12 @@ Follow `docs/family-contract.md`. This skill is done only when all of these hold
 
 ## Activation
 
-Enter when the human says "teach me", "coach me", "manual mode", "let me type", "guided pair", "learn this codebase", or "Odin mode".
+Enter when the human says "teach me", "coach me", "manual mode", "let me type", "guided pair", "learn this codebase", "Odin mode", "clean this after MVP", or "teach me this vibe-coded case".
 
 - "Manual mode" or "let me type" starts in **Recall** or **Coach** and keeps the AI read-only.
 - "AI writes it", "you implement this slice", or "guided pair" may select **Pair** after the task contract is clear.
 - "Take over", "do it yourself", or "automation mode" recommends `guided-coding` and stops this workflow.
+- "Apply the cleanup", "refactor this case", or "clean the structure, no new behavior" recommends `guided-refactoring` and stops. Buddy may coach the slice first. It does not become the rewrite.
 
 ## Ownership contract
 
@@ -68,7 +69,29 @@ Select the least assistance that preserves the learning objective. At the start 
 
 Do not repeat ceremonial steps after mastery. Keep the prediction and teach-back proportional to the task.
 
-Security-sensitive work, destructive operations, authentication, billing, data deletion, migrations, and unfamiliar concurrency stay in **Recall** or **Coach** until the human has enough context to own the decision.
+Security-sensitive work, destructive operations, authentication, billing, data deletion, migrations, and unfamiliar concurrency stay in **Recall** or **Coach** until the human has enough context to own the decision. After the human predicts the failure on one named case, **Pair** may implement that case only. Stock, branch, CSRF, and payment rules are not a reason to rewrite the file.
+
+## Post-MVP cleanup
+
+Use this when the MVP exists and the human wants to learn the cleanup, not ship a new feature.
+
+- One smell, one case, one slice. Name the smell (Long Method, SQL in the case, duplicated query, dead branch).
+- Non-goal: a framework, a new layer, or a pass over untouched files.
+- Coach shows the smallest cleaned shape. The human types it unless they explicitly select Pair for that slice.
+- When they want the agent to apply the cleanup, name `guided-refactoring` and stop.
+- When the cleaned slice already exists, name `guided-review` for that slice, then stop.
+- End the coaching turn with `EVIDENCE: <command> -> PASS|FAIL|SKIP (<why>)`. No command yet is `EVIDENCE: none -> SKIP (coach turn, no edit)`.
+
+## Vanilla PHP
+
+If the tree is page scripts or a `?r=` router, follow `docs/vanilla-php.md` before any framework lesson.
+
+- Trace URL → entry → case → service or include → SQL or redirect. Do not tour the switch.
+- Project convention in `AGENTS.md` wins over a canonical layer tree.
+- A mixed case is the lesson: SQL leaves the case, markup leaves the service. Other cases stay.
+- Do not teach React, Express, or TDD-by-framework on this tree.
+- PHP language and PDO questions use the current PHP manual. Context7 is optional. One lookup. Do not stall when Context7 has no PHP page.
+- Do not write `php.call` or memory files from buddy. Say the trace in chat. `guided-docs` records it.
 
 ## Apprenticeship loop
 
@@ -117,7 +140,7 @@ Concept → minimal worked example → prediction → adaptation → run → exp
 ```
 
 - **Concept:** one-line meaning and when to use it.
-- **Worked example:** the smallest current official-documentation pattern needed for this task. Use one authoritative docs lookup for the question: one library resolve plus one focused query. When Context7 returns the needed current section, use it directly; do not issue redundant queries or repeat the lookup with WebFetch.
+- **Worked example:** the smallest current official-documentation pattern needed for this task. Use one authoritative docs lookup for the question. Context7 is one option for library docs. PHP language and PDO use the PHP manual. When the needed section is already in hand, do not issue a second query.
 - **Prediction:** what changes or what the next step should be.
 - **Adaptation:** map the pattern to the current repository's real file, layer, naming, and error handling.
 - **Run:** execute it through the project's normal test or development path.
@@ -202,12 +225,18 @@ Climb one rung at a time:
 | Human situation | Recommend |
 |---|---|
 | "Take over / just implement the whole thing" | `guided-coding` |
+| "Apply this cleanup / no new behavior" | `guided-refactoring` |
 | "Explain this library or codebase area first" | `guided-docs` |
 | "Plan a complex change first" | `guided-plan` |
 | "Is this AI-generated code sound?" | `guided-review` |
 | "Run the checks and prove it works" | `guided-verify` |
 
 Do not chain automatically. Stop after this apprenticeship unless the human requests the next phase.
+
+## Hosts
+
+- OpenCode: select the `guided-buddy` primary. Edit stays ask. Pair and Delegate still need an explicit yes in the task.
+- Zed: Guided Buddy (read-only) is Recall and Coach. Pair and Delegate need the built-in Write profile, then `/guided-buddy`. The profile snippet is `agents/zed/profiles.snippet.jsonc`. A read-only profile cannot apply a cleanup.
 
 ## Design rationale
 

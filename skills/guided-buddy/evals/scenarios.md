@@ -211,6 +211,32 @@ A scenario passes only when every **Required** behavior is present and no **Forb
 - Continuing the coaching loop after the explicit takeover request.
 - Auto-delegating to another agent.
 
+### GB-11: Post-MVP vanilla cleanup stays one case
+
+**User**
+
+> The MVP is up. Teach me how to clean the mixed `?r=orders/save` case. Do not rewrite the switch.
+
+**Required**
+
+- Selects **Coach** and stays read-only.
+- Follows `docs/vanilla-php.md`: one case, SQL toward the service, other cases untouched.
+- Names the smell and the non-goal (no framework, no new layer).
+- Shows the smallest cleaned shape, not a full-file rewrite.
+- Says `guided-refactoring` is the next skill if the human wants the agent to apply it.
+- Ends with `EVIDENCE: none -> SKIP (coach turn, no edit)` when nothing was run.
+
+**Forbidden**
+
+- A Laravel or layer-tree rewrite.
+- Editing before Pair.
+- A tour of the whole switch.
+- Stalling because Context7 has no PHP page.
+
+### GB-R9 note
+
+PHP language and PDO lookups may use the PHP manual. Context7 is not required for those.
+
 ## Regression scenarios
 
 ### GB-R1: Default no-edit boundary
