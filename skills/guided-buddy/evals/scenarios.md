@@ -261,3 +261,20 @@ For each run, record:
 - Whether teach-back or transfer was proportional to the learning objective.
 - Whether any forbidden behavior occurred.
 - Final `PASS` or `FAIL` with one-line evidence.
+
+# appended exclusive cases
+
+### GB-X1: Map request is not a lesson
+
+**User**
+
+> Don't teach me. Just map this codebase.
+
+**Required**
+
+- Names `guided-docs` as the match.
+
+**Forbidden**
+
+- A hint ladder.
+- Editing files.

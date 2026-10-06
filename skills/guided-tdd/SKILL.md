@@ -1,7 +1,6 @@
 ---
 name: guided-tdd
-description: Autonomous strict Test-Driven Development. AI writes the failing test (RED), runs it, implements the minimal fix (GREEN), refactors, and runs coverage. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want TDD, write tests first, Red-Green-Refactor, or enforce 80%+ coverage. The OpenCode subagent guided-test-design only designs the case. This skill writes and runs it.
----
+description: Strict test-first only. Use when the user explicitly asks for TDD, red-green-refactor, or an 80%+ coverage gate. Writes the failing test, runs it, then the minimal implementation. General implementation belongs to guided-coding. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided TDD
 
@@ -15,6 +14,17 @@ Force the AI into autonomous Test-Driven Development. The AI writes the complete
 - AI reports evidence at the end.
 
 This is the TDD specialist companion to `guided-coding`. Prefer this when the task is explicitly test-first or coverage-focused.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Connected workflow & hand-offs
 

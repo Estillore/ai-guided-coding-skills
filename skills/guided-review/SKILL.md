@@ -1,7 +1,6 @@
 ---
 name: guided-review
-description: Autonomous quality + security review that auto-fixes. AI scans with confidence filters, applies minimal fixes for CRITICAL/HIGH directly, and reports MEDIUM/LOW as follow-ups. Uses project memory and Ponytail minimalism. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for review, code review, security review, or what should I strengthen.
----
+description: Quality and security findings only. Use for review, what should I strengthen, or before merge. Report file:line findings that pass the confidence gate. Running the suite is guided-verify. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Review
 
@@ -15,6 +14,17 @@ Give a clear, actionable review and apply the important fixes immediately — wi
 - AI reports each fix with file:line + failure mode prevented.
 
 This skill is the quality and security gate of the guided family.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Connected workflow & hand-offs
 

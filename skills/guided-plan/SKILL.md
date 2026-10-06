@@ -1,7 +1,6 @@
 ---
 name: guided-plan
-description: Produce a short testable plan and stop. AI outputs the complete plan (goals, constraints, structure, key decisions, test strategy, blast radius 1-3 files) and updates docs/guided-memory.md. Does not implement and does not auto-chain. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for plan, architecture, phased plan, or decide the structure first.
----
+description: Write a short or full testable plan and stop. Use for plan, architecture, phased plan, or decide the structure first. Emits Plan IR and runs validate-plan when the host can write and run a shell. Does not implement and does not auto-chain. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Plan
 
@@ -21,6 +20,17 @@ This skill sits between understanding and implementation:
 - `guided-coding` → implement
 - `guided-refactoring` → clean later if needed
 - `guided-review` / `guided-verify` → close the loop
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Project Memory (self-regenerative)
 

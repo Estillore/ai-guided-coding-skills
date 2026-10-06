@@ -160,5 +160,28 @@ class HostContractConsistencyTest(unittest.TestCase):
         )
 
 
+    def test_each_skill_has_exclusive_trigger_and_evals(self):
+        exclusive = {
+            "guided-buddy": "Learning coach only.",
+            "guided-docs": "Does not teach step-by-step",
+            "guided-plan": "Does not implement",
+            "guided-tdd": "Strict test-first only.",
+            "guided-coding": "Ship the change.",
+            "guided-refactoring": "Clean structure without new behavior.",
+            "guided-review": "Quality and security findings only.",
+            "guided-verify": "Close the loop with evidence.",
+            "guided-infra": "Not a default loop step.",
+        }
+        for skill, phrase in exclusive.items():
+            text = read("skills/%s/SKILL.md" % skill)
+            with self.subTest(skill=skill):
+                self.assertIn(phrase, text)
+                self.assertIn("## Done gate", text)
+                self.assertIn("docs/family-contract.md", text)
+                scenarios = read("skills/%s/evals/scenarios.md" % skill)
+                self.assertIn("**Required**", scenarios)
+                self.assertIn("**Forbidden**", scenarios)
+
+
 if __name__ == "__main__":
     unittest.main()

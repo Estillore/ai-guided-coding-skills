@@ -1,7 +1,6 @@
 ---
 name: guided-docs
-description: Extract the essential mental model and key things to remember when learning a library or existing code. Supports library mode (up-to-date external docs) and project mode (codemap + architecture from real code). Uses codebase mapping and self-regenerative project memory. Ideal at the start of a Kiro Spec or Plan workflow, or any time you need to understand before implementing. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for guided docs, explain this library, help me learn, what does this code do, mental model, key things to remember, or understand this codebase.
----
+description: Map a library or codebase before implementation. Use for mental model, repo-map, what does this code do, or architecture snapshot. Writes docs/repo-map.json when the host can write files. Does not teach step-by-step (guided-buddy) and does not write the plan (guided-plan). Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Docs
 
@@ -23,6 +22,17 @@ Pairs with:
 - `guided-refactoring` → clean structure
 - `guided-review` → quality + security review
 - `guided-verify` → close the loop with evidence
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Project Memory (self-regenerative)
 

@@ -1,7 +1,6 @@
 ---
 name: guided-infra
-description: Infrastructure and growth advisor for the guided family. Audits whatever the codebase actually runs — containers, edge/CDN, databases, caches, queues, object storage, auth, observability, backups, secret hygiene — compares what it has against what the official docs say it should have, then maps detected growth signals to the next architecture and infrastructure rungs with a staged Now/Next/Later roadmap built from official documentation. Recommends only — sensitive infra changes stay human-approved and are implemented through guided-coding. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for scale, infrastructure, docker, cloudflare, reliability, observability, enterprise, migration, architecture evolution, caching, storage, auth, or is this ready to scale.
----
+description: Infrastructure and growth roadmap only. Use when the change touches containers, edge, data stores, or a growth signal already crossed. Emits Now/Next/Later and stops. Not a default loop step. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Infra
 
@@ -16,6 +15,17 @@ Turn “the app is growing” into a clear, evidence-backed plan for what to cha
 - The harness does the deterministic detection; this skill is the judgment layer.
 
 This skill is the growth and evolution advisor of the guided family. It never blocks the loop.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Connected workflow & hand-offs
 

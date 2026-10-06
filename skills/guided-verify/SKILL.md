@@ -1,7 +1,6 @@
 ---
 name: guided-verify
-description: Close the loop with evidence, autonomously. AI runs the verification commands, auto-applies minimal fixes, re-runs until green, and reports evidence. Uses project memory. Prefers package-scoped checks on large codebases. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for verify, run the checks, are we done, test coverage, or confirm this works.
----
+description: Close the loop with evidence. Use for verify, run the checks, are we done, or confirm this works. Runs the planned checks, auto-fixes up to 3 loops, reprints blast-radius drift. Design review belongs to guided-review. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Verify
 
@@ -15,6 +14,17 @@ Turn “it looks done” into “we have evidence it works.”
 - AI reports commands run + results as evidence at the end.
 
 This is the final gate of the guided family.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Project Memory (self-regenerative)
 

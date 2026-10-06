@@ -1,7 +1,6 @@
 ---
 name: guided-coding
-description: Implement the task autonomously with quality guardrails. AI edits code directly, runs tests, and auto-fixes failures. Strong TDD mode with RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Includes Large Codebase Mode and Blast Radius control. Learning and coaching belong to guided-buddy. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want implement this feature, fix this bug, red-green-refactor, or ship a change end-to-end.
----
+description: Ship the change. Use for implement this feature, fix this bug, or end-to-end. Edits code, runs tests, auto-fixes up to 3 loops, stays inside blast radius. Explicit test-first belongs to guided-tdd. Teaching belongs to guided-buddy. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Coding
 
@@ -15,6 +14,17 @@ Automation mode: the AI implements directly to ship faster while keeping the qua
 - Human approves nothing mid-loop in fully autonomous runs; AI reports evidence at the end.
 
 This is the default operating mode. Manual Mode is `guided-buddy`. If the human asks to learn, type the code, or be coached, do not edit. Recommend `/guided-buddy` and stop.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Complexity Gate (automatic)
 

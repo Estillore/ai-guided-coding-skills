@@ -1,7 +1,6 @@
 ---
 name: guided-buddy
-description: AI-assisted learning coach for concepts and real codebases. Use for "teach me", "coach me", "manual mode", "guided pair", "learn this codebase", or "Odin mode"; teaches through bounded practice, AI assistance, senior-style review, and unaided transfer without surrendering ownership.
----
+description: Learning coach only. Use for teach me, coach me, manual mode, guided pair, or Odin mode. Stays read-only until an explicit Pair or Delegate contract. Does not emit the repo-map, does not write the plan, and does not ship the feature. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Buddy
 
@@ -16,6 +15,17 @@ Guided Buddy is an AI-assisted apprenticeship, not a typing simulator and not an
 - The default is learning-first and no file edits. AI edits only in an explicitly selected **Pair** or **Delegate** workflow, within the agreed slice.
 
 This keeps Odin's learn-by-doing and research habits, W3Schools-style short editable experiments, and the context, review, and verification practices expected in enterprise AI-assisted development.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Activation
 

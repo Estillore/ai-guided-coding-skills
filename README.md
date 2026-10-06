@@ -326,6 +326,8 @@ Install always copies from the `skills/` folder (canonical source).
 
 `agents/guided-planner.json` is the read-only planner agent. It loads `guided-plan` and `guided-docs`. It is not a skill. Review uses `guided-review`; the reviewer agent is `agents/guided-reviewer.json`.
 
+Shared rules and the evidence line live in `docs/family-contract.md`. Each skill has `evals/scenarios.md`. A run is not done without `EVIDENCE: ... -> PASS|FAIL|SKIP`.
+
 ---
 
 ## Install paths (Windows + Mac)

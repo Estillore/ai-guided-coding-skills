@@ -1,7 +1,6 @@
 ---
 name: guided-refactoring
-description: Autonomous refactoring of vibe-coded or messy code to match framework standards and project conventions. AI diagnoses code smells, applies the complete cleaned version directly, runs checks, and reports. Uses Documentation-is-Truth, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Works in any Kiro workflow (especially Bug Fix and Spec), in Grok, in OpenCode, and in Zed. Use for refactor this, clean this vibe code, make it match standards, or fix structural problems.
----
+description: Clean structure without new behavior. Use after the behavior is green, or when asked to refactor vibe-coded code. Does not add features and does not auto-chain. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Refactoring
 
@@ -15,6 +14,17 @@ Force the AI into autonomous refactoring that eliminates guesswork and ships the
 - AI reports each change with file:line + technique used.
 
 This skill is the natural follow-up to `guided-docs`. Use guided-docs first to extract the essential standards of the framework (Next.js, Laravel, etc.), then switch here to drive the refactor.
+
+
+## Done gate
+
+Follow `docs/family-contract.md`. This skill is done only when all of these hold:
+
+- The exclusive trigger matched this skill, not a neighbor.
+- Blast radius was declared before any edit.
+- The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
+- The next skill is named in one line, then stop. Do not auto-chain.
+
 
 ## Connected workflow & hand-offs
 
