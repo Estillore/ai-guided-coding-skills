@@ -158,7 +158,7 @@ When the code under review is a React project, deterministic scanner evidence fe
 On vanilla PHP, do not demand PHPStan above level 0 or Oxlint on inline script tags. Those are later rungs in `guided-refactoring`, not review failures.
 
 
-On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not the whole repo. A finding outside that chain needs a reason. Blank pages, double includes, header-already-sent, and concatenated SQL in the chain outrank style nits.
+On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not the whole repo. A finding outside that chain needs a reason. Blank pages, double includes, header-already-sent, and concatenated SQL in the chain outrank style nits. A structural mix (SQL or HTML in the case) is a `guided-refactoring` hand-off for that case only. Injection, a client-owned total, or a missing constraint stays in this review.
 
 If the interaction is a form post or a link, do not search for JavaScript. The result is the PHP that runs that request.
 
@@ -280,7 +280,13 @@ const total = items.reduce((sum, i) => sum + i.price, 0);
 [MEDIUM] Missing status guard on cancel
 File: src/orders/cancel.ts:18
 …
-Which findings do you want to address?
+Next: guided-verify on this slice.
+
+[CRITICAL] Concatenated SKU
+File: public/save.php:3
+Issue: sku from the request is interpolated into SQL.
+Why existing guards do not catch it: no prepare on this path.
+Fix applied: prepared insert; total computed server-side.
 ```
 
 ## Resources

@@ -262,9 +262,9 @@ Stop when all of the following are true:
 
 ## Anti-patterns (refuse these)
 
-- Editing the codebase or applying patches.
 - Dumping a complete new version of an entire file as the first step.
 - Suggesting large architectural rewrites that go beyond the framework standards or the current task.
+- Rewriting vanilla PHP into a framework as the cleanup.
 - Continuing after the definition of done is met.
 - Long explanatory paragraphs or lectures.
 - Introducing new libraries or abstractions unless the framework or the existing project already uses them.
@@ -289,6 +289,23 @@ export default async function DashboardPage() {
 ```
 
 Type that change. Leave everything else untouched for now. Paste the result when ready.”
+
+**Good (vanilla PHP router, one case):**
+“Smell: SQL in the `?r=` case. Technique: Move Method into the existing service. Do not rewrite the switch.
+
+Case becomes a call. SQL moves to `src/Modules/orders/service.php`:
+
+```php
+function orderTotalCents(int $qty, int $unitPriceCents): int
+{
+    if ($qty < 1 || $unitPriceCents < 0) {
+        throw new InvalidArgumentException('qty must be >= 1 and price >= 0');
+    }
+    return $qty * $unitPriceCents;
+}
+```
+
+Leave every other case untouched. Next: `guided-review` on this slice only.”
 
 ## Resources
 

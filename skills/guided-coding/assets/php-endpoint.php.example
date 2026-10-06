@@ -1,13 +1,27 @@
 <?php
 declare(strict_types=1);
 
-// Minimal PHP endpoint / handler template
-// Keep it thin. Put business logic elsewhere if needed.
+// Thin handler. Business rule lives in the function. SQL stays parameterized.
 
-function handleRequest(): void
+function orderTotalCents(int $qty, int $unitPriceCents): int
 {
-    // TODO: implement
-    // - read input
-    // - call the real logic
-    // - return response
+    if ($qty < 1 || $unitPriceCents < 0) {
+        throw new InvalidArgumentException('qty must be >= 1 and price >= 0');
+    }
+    return $qty * $unitPriceCents;
+}
+
+function handleCreateOrder(PDO $pdo, int $qty, int $unitPriceCents, string $sku): int
+{
+    $total = orderTotalCents($qty, $unitPriceCents);
+    $stmt = $pdo->prepare(
+        'INSERT INTO orders (sku, qty, unit_price_cents, total_cents) VALUES (:sku, :qty, :price, :total)'
+    );
+    $stmt->execute([
+        'sku' => $sku,
+        'qty' => $qty,
+        'price' => $unitPriceCents,
+        'total' => $total,
+    ]);
+    return $total;
 }

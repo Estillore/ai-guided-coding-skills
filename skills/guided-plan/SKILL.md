@@ -53,7 +53,7 @@ On a PHP router, a smell is:
 - A query or session write inside a view
 - A new plan file, or a step that rereads the whole switch
 
-Write each smell as `file:line — rule — one-line fix`. If the touched case is mixed, the plan recommends `guided-refactoring` for that case only, then coding. No smell means say so. Do not invent a cleanup of untouched cases.
+Write each smell as `file:line — rule — one-line fix`. If the touched case is mixed, the plan recommends `guided-refactoring` for that case only, then coding. If the smell is already-shipped behavior (concatenated SQL, a client-owned total, a missing constraint, a write on GET), also name `guided-review` for that slice after the structural step. No smell means say so. Do not invent a cleanup of untouched cases. Do not start either skill from this phase.
 
 ## Done gate
 
