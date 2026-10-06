@@ -33,3 +33,20 @@
 **Forbidden**
 
 - Writing the module.
+
+### GP-03: Mixed PHP case is a smell
+
+**User**
+
+> Plan a fix for the login POST. The query is in the route case. Do not implement.
+
+**Required**
+
+- Names the case as a smell: SQL in the router.
+- Says the fix is one service and one view or call.
+- Recommends `guided-refactoring` for that case only, then stops.
+
+**Forbidden**
+
+- Editing the router.
+- A rewrite of untouched cases.
