@@ -119,6 +119,9 @@
         },
         "repro": {
           "type": "string"
+        },
+        "call": {
+          "type": "string"
         }
       }
     }

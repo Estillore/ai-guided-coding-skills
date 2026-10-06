@@ -169,7 +169,7 @@ This skill must work well across many different codebases and frameworks (Next.j
 
 ## Vanilla PHP (page scripts, no framework)
 
-If the repo matches `docs/vanilla-php.md`, follow that file before any generic framework map. Build the entry list, shared includes, and the symptom include chain. Write them to `docs/repo-map.json` under `php`. Do not read the whole tree. A bugfix that starts without that chain is not started.
+If the repo matches `docs/vanilla-php.md`, follow that file before any generic framework map. Trace URL → entry script → include → function → SQL or redirect. Write that `php.call` into `docs/repo-map.json`. Do not read whole files. A bugfix that starts without `php.call` is not started.
 
 
 ## Semantic retrieval (capability-aware)

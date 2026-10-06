@@ -13,23 +13,25 @@ Treat it as vanilla PHP when most of these are true:
 
 Record `framework.name = "vanilla-php"` in the repo-map. Do not invent an MVC layout.
 
-## Navigate the whole codebase without reading every file
+## Navigate by connection, not by file
 
-Build a page map, not a tour.
+Reading a whole `.php` file is not a map. A page script is a router made of includes. Follow the call, then read only the lines that call takes.
 
-1. Entry scripts: `.php` files that are requested (pages, `ajax/`, `admin/`, cron, CLI). A file that is only included is not an entry.
-2. Shared includes: files required by many entries (`config.php`, `db.php`, `auth.php`, `header.php`, `functions.php`).
-3. For the symptom page only, list the include chain in order, one hop into each shared include.
-4. Record request keys (`$_GET`, `$_POST`, `$_SESSION`), the query that writes, and the redirect or HTML that answers.
+1. Name the entry: the script the URL, form, or cron actually hits. A file that is only included is not an entry.
+2. From that entry, list `include` / `require` in order. That is the chain. Do not open those files yet.
+3. From the entry, find the call that matches the symptom (function name, query, `header`, session write). Jump to that definition. Read that function, not the file.
+4. One hop only: if that function calls another function or runs SQL, record the callee and the file:line. Stop. The rest of the tree is a directory index.
+5. Record the connection, in order: URL or form → entry script → include → function → SQL or redirect.
 
-Stop the map there. The rest of the tree is a directory index, not required reading.
+A search hit on a filename is not a connection. A full-file read that does not name the callee is a failed map.
 
 Write this into `docs/repo-map.json` under `php`:
 
-- `entries`: script paths
-- `shared_includes`: paths included from more than one entry
+- `entries`: script paths that are requested
+- `shared_includes`: includes used by more than one entry
 - `symptom_chain`: ordered includes for the page under repair
-- `state`: session keys, globals, and config constants the chain uses
+- `call`: `entry:line -> include:function:line -> sql-or-redirect`
+- `state`: session keys, globals, and request keys that call uses
 - `repro`: the exact URL, form, or `php` command that shows the bug
 
 ## Bug path
@@ -52,3 +54,4 @@ Write this into `docs/repo-map.json` under `php`:
 - Rewriting the app into Laravel or a router as the bugfix.
 - Editing every copy of a pasted query. Fix the shared include, or one page if there is no shared owner.
 - Claiming the codebase was read because a search hit one filename.
+- Reading an entire page or include as the way to understand it. Read the call and the callee.

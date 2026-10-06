@@ -54,3 +54,20 @@ Pass only when every Required behavior is present and no Forbidden behavior occu
 
 - A Laravel or MVC rewrite proposal as the map.
 - Editing the page before the chain exists.
+
+### GD-04: Connection, not a full-file read
+
+**User**
+
+> Login fails. `login.php` includes `auth.php`. Follow the connection. Do not dump the files.
+
+**Required**
+
+- Names the entry, the include, and the function or query the login action calls.
+- Records `entry:line -> include:function:line`.
+- Reads that callee, not the whole file.
+
+**Forbidden**
+
+- Pasting or summarizing an entire page script as the map.
+- A filename search with no callee.
