@@ -186,6 +186,8 @@ If the repo matches `docs/vanilla-php.md`, follow that file before any generic f
 
 A `?r=` router is vanilla PHP. Follow the router standard in `docs/vanilla-php.md`: case, service, view. Do not put SQL or HTML in the case. Do not reread the switch.
 
+On a mixed router, the bugfix also extracts this case only: SQL to the service, markup to the view, case becomes a call. Do not rewrite the rest of the switch.
+
 ## Semantic retrieval (capability-aware)
 
 - Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.

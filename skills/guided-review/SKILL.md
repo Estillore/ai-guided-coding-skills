@@ -162,6 +162,8 @@ On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not
 
 If the interaction is a form post or a link, do not search for JavaScript. The result is the PHP that runs that request.
 
+On a mixed router, the bugfix also extracts this case only: SQL to the service, markup to the view, case becomes a call. Do not rewrite the rest of the switch.
+
 ## PHP lane (deterministic auditors — external tools, never bundled)
 
 When the code under review is a PHP project, deterministic auditor evidence feeds the review. The skill stays the judge:

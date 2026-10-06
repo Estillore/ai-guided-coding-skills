@@ -31,6 +31,8 @@ If the interaction is a form post or a link, do not search for JavaScript. The r
 
 A `?r=` router is vanilla PHP. Follow the router standard in `docs/vanilla-php.md`: case, service, view. Do not put SQL or HTML in the case. Do not reread the switch.
 
+On a mixed router, the bugfix also extracts this case only: SQL to the service, markup to the view, case becomes a call. Do not rewrite the rest of the switch.
+
 ## Vanilla PHP gate
 
 If `framework.name` is `vanilla-php`, or the repo matches `docs/vanilla-php.md`:

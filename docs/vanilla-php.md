@@ -71,6 +71,20 @@ A `public/index.php` that switches on `?r=` is still vanilla PHP. It is not a li
 
 `AGENTS.md` keeps the trace only. Do not write a new plan JSON for a one-case change.
 
+
+## Correct the touched case only
+
+When a bug lands in a mixed router, fix the behavior and move that case toward the standard in the same edit. Do not rewrite the switch.
+
+- Leave every other case as it is.
+- Move the SQL and the rule for this route into `src/Modules/<name>/service.php`.
+- Move markup for this route into `views/<name>/`.
+- The case becomes: check method, call the service, `jsonOut` or require the view.
+- Record the new `php.call` in the `## Guided` section of `AGENTS.md`.
+- Evidence is `php -l` on the case, the service, and the view, plus the repro for this route.
+
+A bugfix that adds more SQL to the case is not done.
+
 ## Refuse
 
 - Rewriting the app into Laravel or a router as the bugfix.
