@@ -1,6 +1,6 @@
 ---
 name: guided-coding
-description: Ship the change. Use for implement this feature, fix this bug, or end-to-end. Edits code, runs tests, auto-fixes up to 3 loops, stays inside blast radius. Explicit test-first belongs to guided-tdd. Teaching belongs to guided-buddy. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Ship the change. On a vanilla PHP tree, trace php.call before any file read. Use for implement this feature, fix this bug, or end-to-end. Edits code, runs tests, auto-fixes up to 3 loops, stays inside blast radius. Explicit test-first belongs to guided-tdd. Teaching belongs to guided-buddy. Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Coding
 
@@ -17,12 +17,22 @@ This is the default operating mode. Manual Mode is `guided-buddy`. If the human 
 
 
 
+
+## First action on a PHP tree
+
+Before any mode, any whole-file read, or any edit: if the tree has page scripts and `include` / `require`, this is vanilla PHP. React and TDD do not apply.
+
+1. Run `python ~/.guided/scripts/guided_run.py php-trace --repo . --entry <script>`.
+2. Write one line into the `## Guided` section of `AGENTS.md`: `php.call: entry:line -> include:function:line -> sql-or-redirect`.
+3. Do not open a file except the callee line `php-trace` printed.
+4. No `php.call` means stop. Do not edit.
+
 ## Vanilla PHP gate
 
 If `framework.name` is `vanilla-php`, or the repo matches `docs/vanilla-php.md`:
 
 - Run `python ~/.guided/scripts/guided_run.py php-trace --repo . --entry <script>` and use its edges. Do not read whole files to discover includes.
-- Do not edit until `docs/repo-map.json` has `php.call` in the form `entry:line -> include:function:line -> sql-or-redirect`.
+- Do not edit until `AGENTS.md` has `php.call` in the form `entry:line -> include:function:line -> sql-or-redirect`.
 - Missing `php.call` stops the edit. Say so and return to `guided-docs`.
 
 ## Done gate

@@ -31,6 +31,16 @@ If `framework.name` is `vanilla-php`, or the repo matches `docs/vanilla-php.md`:
 - Do not edit until `docs/repo-map.json` has `php.call` in the form `entry:line -> include:function:line -> sql-or-redirect`.
 - Missing `php.call` stops the edit. Say so and return to `guided-docs`.
 
+
+## First action on a PHP tree
+
+Before any mode, any whole-file read, or any edit: if the tree has page scripts and `include` / `require`, this is vanilla PHP. React and TDD do not apply.
+
+1. Run `python ~/.guided/scripts/guided_run.py php-trace --repo . --entry <script>`.
+2. Write one line into the `## Guided` section of `AGENTS.md`: `php.call: entry:line -> include:function:line -> sql-or-redirect`.
+3. Do not open a file except the callee line `php-trace` printed.
+4. No `php.call` means stop. Do not edit.
+
 ## Done gate
 
 Follow `docs/family-contract.md`. This skill is done only when all of these hold:

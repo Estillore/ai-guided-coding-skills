@@ -1,6 +1,6 @@
 ---
 name: guided-docs
-description: Map a library or codebase before implementation. Use for mental model, repo-map, what does this code do, or architecture snapshot. Writes docs/repo-map.json when the host can write files. Does not teach step-by-step (guided-buddy) and does not write the plan (guided-plan). Works in Kiro, Grok, OpenCode, and Zed.---
+description: Map a library or codebase before implementation. On vanilla PHP, the map is the entry-to-callee trace, not a file dump. Use for mental model, repo-map, what does this code do, or architecture snapshot. Writes docs/repo-map.json when the host can write files. Does not teach step-by-step (guided-buddy) and does not write the plan (guided-plan). Works in Kiro, Grok, OpenCode, and Zed.---
 
 # Guided Docs
 
@@ -23,6 +23,16 @@ Pairs with:
 - `guided-review` → quality + security review
 - `guided-verify` → close the loop with evidence
 
+
+
+## First action on a PHP tree
+
+Before any mode, any whole-file read, or any edit: if the tree has page scripts and `include` / `require`, this is vanilla PHP. React and TDD do not apply.
+
+1. Run `python ~/.guided/scripts/guided_run.py php-trace --repo . --entry <script>`.
+2. Write one line into the `## Guided` section of `AGENTS.md`: `php.call: entry:line -> include:function:line -> sql-or-redirect`.
+3. Do not open a file except the callee line `php-trace` printed.
+4. No `php.call` means stop. Do not edit.
 
 ## Done gate
 
