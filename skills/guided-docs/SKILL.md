@@ -34,6 +34,8 @@ Before any mode, any whole-file read, or any edit: if the tree has page scripts 
 3. Do not open a file except the callee line `php-trace` printed.
 4. No `php.call` means stop. Do not edit.
 
+If the interaction is a form post or a link, do not search for JavaScript. The result is the PHP that runs that request.
+
 ## Done gate
 
 Follow `docs/family-contract.md`. This skill is done only when all of these hold:

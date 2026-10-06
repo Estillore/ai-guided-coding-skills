@@ -34,6 +34,15 @@ Write this into `docs/repo-map.json` under `php`:
 - `state`: session keys, globals, and request keys that call uses
 - `repro`: the exact URL, form, or `php` command that shows the bug
 
+
+## Interaction is the request
+
+These apps have no JavaScript layer. A form post, a link, or a redirect is the interaction. PHP renders the next page. Do not look for a click handler, a client component, or an API fetch.
+
+- The result is PHP: the SQL, the session write, the `header()` redirect, or the HTML the script prints.
+- Evidence is the request and the response page, not a browser bundle.
+- Oxlint, React mode, and a frontend file map do not apply. Skip them. A missing `.js` file is not a gap.
+
 ## Bug path
 
 1. Reproduce on the entry script. A white screen is still a result: check `php -l` on the chain, then the last include that ran.

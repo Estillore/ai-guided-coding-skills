@@ -160,6 +160,8 @@ On vanilla PHP, do not demand PHPStan above level 0 or Oxlint on inline script t
 
 On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not the whole repo. A finding outside that chain needs a reason. Blank pages, double includes, header-already-sent, and concatenated SQL in the chain outrank style nits.
 
+If the interaction is a form post or a link, do not search for JavaScript. The result is the PHP that runs that request.
+
 ## PHP lane (deterministic auditors — external tools, never bundled)
 
 When the code under review is a PHP project, deterministic auditor evidence feeds the review. The skill stays the judge:
