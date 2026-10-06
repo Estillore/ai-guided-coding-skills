@@ -169,9 +169,10 @@ On a mixed router, the bugfix also extracts this case only: SQL to the service, 
 When the code under review is a PHP project, deterministic auditor evidence feeds the review. The skill stays the judge:
 
 1. **Detect** — `composer.json` at the repo root. Not PHP → skip this lane, one line at most.
-2. **Scan via the harness** (runs only tools the project already has; never installs anything; degrades gracefully):
+2. **Scan via the harness** (installs missing phpstan, pint, and rector as dev dependencies unless `--no-install`; never installs Warden; deptrac and psalm still skip without their own config):
    `python ~/.guided/scripts/guided_run.py php-audit --repo <dir> --scope full --blocking error`
-   - `SKIP` (not PHP / no php on PATH / no tools installed) → continue skill-only, note why in one line. A bare `composer.json` with zero tools is itself a follow-up: recommend installing phpstan + pint. `PHP-AUDIT: PASS` is valid only when phpstan, pint, or rector actually ran. Skipped tools plus a composer-audit line are not a clean audit.
+   - `SKIP` (not PHP / no php on PATH / composer require failed) → continue skill-only, note why in one line. A failed install is not a clean audit.
+   - `PHP-AUDIT: PASS` is valid only when phpstan, pint, or rector actually ran.
    - Findings map to severity: `error` class (phpstan, psalm-taint, deptrac, composer critical/high, warden) → CRITICAL/HIGH pipeline (auto-fix), `warning` class (pint, rector drift, composer medium/low) → MEDIUM/LOW follow-ups — each still passes the confidence gate above before reporting.
    - Respect the repo's configs (`phpstan.neon`, `psalm.xml`, `pint.json`, `rector.php`, `deptrac.yaml`, baselines); never re-implement auditor rules here — consume the receipt JSON.
    - Interactive complement (optional, never evidence): if PHP MCPs are registered (`guided_run.py mcp`), the agent may call `phpstan_analyze` / `phpcs_check` / Boost tools mid-review for exploration. MCP output is a lead — only harness receipts and re-run tool output enter the report.

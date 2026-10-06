@@ -1195,6 +1195,49 @@ def _parse_json_tail(out):
         return None
 
 
+def ensure_php_audit_tools(repo):
+    """Install the code auditors when the project does not have them.
+
+    A skipped phpstan is not an audit. Dev-require phpstan, pint, and rector
+    so the lane can run. Deptrac, Psalm, and Warden stay optional: they need
+    a config or Laravel, and installing them would still SKIP.
+    """
+    if not shutil.which("composer"):
+        return False, "composer not on PATH"
+    missing = [pkg for pkg, binary in (
+        ("phpstan/phpstan", "phpstan"),
+        ("laravel/pint", "pint"),
+        ("rector/rector", "rector"),
+    ) if not _tool(repo, binary)]
+    if not missing:
+        return False, "already installed"
+    rc, out = sh(["composer", "require", "--dev", "--no-interaction",
+                  "--with-all-dependencies"] + missing, repo, timeout=900)
+    if rc != 0:
+        return False, "composer require failed: %s" % _one_line(out, 200)
+    return True, "installed " + " ".join(missing)
+
+
+def ensure_phpstan_config(repo):
+    """Write a level-0 neon only when the project has none."""
+    if _first_file(repo, ("phpstan.neon", "phpstan.neon.dist",
+                          "phpstan.dist.neon")):
+        return False, "existing config left untouched"
+    paths = [d for d in ("src", "app", "lib", "public")
+             if os.path.isdir(os.path.join(repo, d))]
+    if not paths:
+        paths = ["."]
+    body = "parameters:\n  level: 0\n  paths:\n" + "".join(
+        "    - %s\n" % p for p in paths)
+    path = os.path.join(repo, "phpstan.neon")
+    try:
+        with open(path, "x", encoding="utf-8", newline="\n") as f:
+            f.write(body)
+    except OSError as e:
+        return False, "could not write phpstan.neon: %s" % _one_line(e, 120)
+    return True, "created phpstan.neon level 0"
+
+
 def step_phpstan(repo, scope):
     tool = _tool(repo, "phpstan")
     if not tool:
@@ -1416,6 +1459,7 @@ def cmd_php_audit(args):
     run_id = _run_id()
     results = []
     status = "SKIP"
+    install = "--no-install" not in args
 
     if not os.path.isfile(os.path.join(repo, "composer.json")):
         results.append({"step": "detect", "rc": 1,
@@ -1425,6 +1469,14 @@ def cmd_php_audit(args):
         results.append({"step": "detect", "rc": 1,
                         "out": "SKIP: php not on PATH"})
     else:
+        if install:
+            added, note = ensure_php_audit_tools(repo)
+            print("[%s] tools -> %s" % ("WRITE" if added else "INFO",
+                                        _one_line(note, 200)))
+            wrote, cfg_note = ensure_phpstan_config(repo)
+            if wrote or "could not" in cfg_note:
+                print("[%s] config -> %s" % (
+                    "WRITE" if wrote else "WARN", _one_line(cfg_note, 160)))
         steps = [step_phpstan(repo, scope), step_pint(repo, scope),
                  step_composer_audit(repo), step_rector(repo),
                  step_deptrac(repo), step_psalm_taint(repo),
