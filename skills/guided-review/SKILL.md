@@ -155,7 +155,7 @@ When the code under review is a React project, deterministic scanner evidence fe
 
 ## Vanilla PHP bug review
 
-On vanilla PHP, do not demand PHPStan above level 0 or Oxlint on inline script tags. Those are later rungs in `guided-refactoring`, not review failures.
+On vanilla PHP, do not demand PHPStan above level 0 or Oxlint on inline script tags. Those are later rungs in `guided-refactoring`, not review failures. `JS-LINT: FAIL` with `unparseable output` is a receipt failure, not a JavaScript defect. Do not modernize from it. A parsed `diagnostics` array is the only oxlint evidence.
 
 
 On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not the whole repo. A finding outside that chain needs a reason. Blank pages, double includes, header-already-sent, and concatenated SQL in the chain outrank style nits. A structural mix (SQL or HTML in the case) is a `guided-refactoring` hand-off for that case only. Injection, a client-owned total, or a missing constraint stays in this review. Bootstrap findings are version mismatches (`data-toggle` on 5.x), a CDN next to a vendored copy, or a second bundle. Do not report a Bootstrap-free receipt as a defect when the project keeps it free.

@@ -95,6 +95,17 @@ Vendored Bootstrap is part of the standard, not a suggestion.
 - One Bootstrap bundle. Do not init a modal or dropdown the layout already inits.
 - Leave a Bootstrap-free print or receipt view alone when the project says it must stay free.
 
+## Oxlint is the JS modernization lane
+
+Oxlint does not modernize PHP. It checks extracted page scripts only.
+
+- A `<script>` body in a `.php` file is invisible. Extract that page's script to a `.js` file the page already loads, then lint that file. Leave other pages alone.
+- No local oxlint binary is fine. The lane uses the pinned `npx` oxlint. `SKIP` means it never ran. Do not call that clean.
+- No `.oxlintrc.json`: the lane may write the browser starter. Commit it. Without `env.browser`, `document` and `window` are false `no-undef` errors.
+- `unparseable output` is a broken receipt, not a list of script bugs. Read the receipt `out` before editing JavaScript.
+- Do not lint vendored `bootstrap.bundle.min.js`. Point the command at the page script.
+- Evidence of a real run is oxlint JSON with a `diagnostics` array.
+
 ## Refuse
 
 - Rewriting the app into Laravel or a router as the bugfix.
