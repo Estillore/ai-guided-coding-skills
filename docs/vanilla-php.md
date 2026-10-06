@@ -58,6 +58,19 @@ These apps have no JavaScript layer. A form post, a link, or a redirect is the i
    - `display_errors` off, so the failure is a blank page
 5. Evidence is `php -l` on each touched file plus the repro command. If the repo has no PHPUnit suite, a small `php` assertion script under `tests/` is enough. Do not block on a new framework test harness.
 
+
+## Standard for a router app
+
+A `public/index.php` that switches on `?r=` is still vanilla PHP. It is not a license to mix layers.
+
+- Router: one case, include the service, return JSON or require one view. No SQL in the case.
+- Service: `src/Modules/<name>/service.php` owns the query and the rule. HTML does not live here.
+- View: `views/<name>/*.php` owns markup. No query, no `header()`, no session write.
+- A new feature is those three hops, or fewer. Do not add a case that contains the function.
+- Do not reread the router. `php-trace --entry public/index.php` and jump to the case. A 30-minute feature is the skill reading the whole switch again.
+
+`AGENTS.md` keeps the trace only. Do not write a new plan JSON for a one-case change.
+
 ## Refuse
 
 - Rewriting the app into Laravel or a router as the bugfix.

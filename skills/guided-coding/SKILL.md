@@ -29,6 +29,8 @@ Before any mode, any whole-file read, or any edit: if the tree has page scripts 
 
 If the interaction is a form post or a link, do not search for JavaScript. The result is the PHP that runs that request.
 
+A `?r=` router is vanilla PHP. Follow the router standard in `docs/vanilla-php.md`: case, service, view. Do not put SQL or HTML in the case. Do not reread the switch.
+
 ## Vanilla PHP gate
 
 If `framework.name` is `vanilla-php`, or the repo matches `docs/vanilla-php.md`:

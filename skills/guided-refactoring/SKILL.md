@@ -184,6 +184,8 @@ This skill must work well across many different codebases and frameworks (Next.j
 If the repo matches `docs/vanilla-php.md`, follow that file before any generic framework map. Trace URL → entry script → include → function → SQL or redirect. Write that `php.call` into `docs/repo-map.json`. Do not read whole files. A bugfix that starts without `php.call` is not started.
 
 
+A `?r=` router is vanilla PHP. Follow the router standard in `docs/vanilla-php.md`: case, service, view. Do not put SQL or HTML in the case. Do not reread the switch.
+
 ## Semantic retrieval (capability-aware)
 
 - Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.
