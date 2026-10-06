@@ -16,6 +16,18 @@ Force the AI into autonomous refactoring that eliminates guesswork and ships the
 This skill is the natural follow-up to `guided-docs`. Use guided-docs first to extract the essential standards of the framework (Next.js, Laravel, etc.), then switch here to drive the refactor.
 
 
+## Modernize vanilla PHP, one rung
+
+A modernization request is not a rewrite. On vanilla PHP, do one rung, then stop:
+
+1. `php -l` on the symptom chain.
+2. Style only, PHP-CS-Fixer or Pint, PSR-12, shared includes first.
+3. Syntax upgrade toward the PHP version the app already runs, Rector on shared includes only. Recheck mixed HTML pages by hand.
+4. PHPStan level 0 on the chain.
+5. Oxlint only after page scripts are external `.js` files.
+
+Do not skip to a framework. The next rung is a later run.
+
 ## Done gate
 
 Follow `docs/family-contract.md`. This skill is done only when all of these hold:

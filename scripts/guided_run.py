@@ -2770,6 +2770,66 @@ def cmd_record_install(args):
     return 0
 
 
+def cmd_php_trace(args):
+    """Print entry -> include edges. Does not read file bodies into the reply."""
+    import os
+    repo = "."
+    entry = None
+    i = 0
+    while i < len(args):
+        if args[i] == "--repo" and i + 1 < len(args):
+            repo = args[i + 1]
+            i += 2
+            continue
+        if args[i] == "--entry" and i + 1 < len(args):
+            entry = args[i + 1].replace("\\", "/")
+            i += 2
+            continue
+        i += 1
+    skip = {"vendor", "node_modules", ".git", "storage", "cache"}
+    edges = []
+    files = []
+    for dirpath, dirnames, filenames in os.walk(repo):
+        dirnames[:] = [d for d in dirnames if d not in skip and not d.startswith(".")]
+        for name in filenames:
+            if not name.endswith(".php"):
+                continue
+            path = os.path.join(dirpath, name).replace("\\", "/")
+            rel = os.path.relpath(path, repo).replace("\\", "/")
+            files.append(rel)
+            try:
+                lines = open(path, encoding="utf-8", errors="ignore").read().splitlines()
+            except OSError:
+                continue
+            for n, line in enumerate(lines, 1):
+                stripped = line.strip()
+                if "include" not in stripped and "require" not in stripped:
+                    continue
+                edges.append("%s:%d includes %s" % (rel, n, stripped[:120]))
+    included = set()
+    for edge in edges:
+        included.add(edge.split(" includes ", 1)[-1])
+    print("PHP TRACE")
+    print("entries:")
+    for rel in files:
+        if entry and entry not in rel:
+            continue
+        print("  " + rel)
+    print("includes:")
+    shown = 0
+    for edge in edges:
+        if entry and entry not in edge.split(" includes ", 1)[0]:
+            continue
+        print("  " + edge)
+        shown += 1
+        if shown >= 40:
+            print("  ... truncated")
+            break
+    print("PHP TRACE: PASS" if files else "PHP TRACE: FAIL no php files")
+    return 0 if files else 1
+
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__.strip())
@@ -2801,9 +2861,11 @@ def main():
         return cmd_record_install(rest)
     if cmd == "init":
         return cmd_init(rest)
+    if cmd == "php-trace":
+        return cmd_php_trace(rest)
     print("unknown command: %s "
           "(validate-plan|verify|react-doctor|growth|php-audit|js-lint|"
-          "orchestrator|mcp|lsp|sync|record-install|init)" % cmd)
+          "orchestrator|mcp|lsp|sync|record-install|init|php-trace)" % cmd)
     return 1
 
 

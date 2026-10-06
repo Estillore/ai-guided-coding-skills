@@ -84,6 +84,8 @@ Apply the cleaned version that keeps the test green. Preserve behavior exactly.
 ### 7. Coverage gate
 Run the coverage command and require 80%+ branches/functions/lines/statements on the touched code. Add tests until green.
 
+If the repo has no PHPUnit or other runner, do not invent one. The failing check is the recorded repro: `php -l` on the chain, then the `php` script or URL in `php.repro`. That script is the RED test.
+
 ## Edge cases the AI must always address in the shown tests
 
 1. Null / undefined input

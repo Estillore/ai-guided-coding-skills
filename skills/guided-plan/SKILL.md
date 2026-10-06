@@ -22,6 +22,15 @@ This skill sits between understanding and implementation:
 - `guided-review` / `guided-verify` → close the loop
 
 
+
+## Vanilla PHP gate
+
+If `framework.name` is `vanilla-php`, or the repo matches `docs/vanilla-php.md`:
+
+- Run `python ~/.guided/scripts/guided_run.py php-trace --repo . --entry <script>` and use its edges. Do not read whole files to discover includes.
+- Do not edit until `docs/repo-map.json` has `php.call` in the form `entry:line -> include:function:line -> sql-or-redirect`.
+- Missing `php.call` stops the edit. Say so and return to `guided-docs`.
+
 ## Done gate
 
 Follow `docs/family-contract.md`. This skill is done only when all of these hold:
