@@ -41,6 +41,20 @@ Before any mode, any whole-file read, or any edit: if the tree has page scripts 
 3. Do not open a file except the callee line `php-trace` printed.
 4. No `php.call` means stop. Do not edit.
 
+
+## Smell pass
+
+Before the plan is done, check the touched files against `docs/vanilla-php.md` and the project standard. Report smells. Do not fix them.
+
+On a PHP router, a smell is:
+
+- SQL or a business rule inside a `?r=` case
+- HTML, `header()`, or a session write inside a service
+- A query or session write inside a view
+- A new plan file, or a step that rereads the whole switch
+
+Write each smell as `file:line — rule — one-line fix`. If the touched case is mixed, the plan recommends `guided-refactoring` for that case only, then coding. No smell means say so. Do not invent a cleanup of untouched cases.
+
 ## Done gate
 
 Follow `docs/family-contract.md`. This skill is done only when all of these hold:
