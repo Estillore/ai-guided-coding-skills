@@ -155,6 +155,9 @@ When the code under review is a React project, deterministic scanner evidence fe
 
 ## Vanilla PHP bug review
 
+On vanilla PHP, do not demand PHPStan above level 0 or Oxlint on inline script tags. Those are later rungs in `guided-refactoring`, not review failures.
+
+
 On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not the whole repo. A finding outside that chain needs a reason. Blank pages, double includes, header-already-sent, and concatenated SQL in the chain outrank style nits.
 
 ## PHP lane (deterministic auditors — external tools, never bundled)

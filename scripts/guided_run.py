@@ -2771,8 +2771,9 @@ def cmd_record_install(args):
 
 
 def cmd_php_trace(args):
-    """Print entry -> include edges. Does not read file bodies into the reply."""
+    """Print entry:line -> include:function:line from include edges and function defs."""
     import os
+    import re
     repo = "."
     entry = None
     i = 0
@@ -2787,43 +2788,49 @@ def cmd_php_trace(args):
             continue
         i += 1
     skip = {"vendor", "node_modules", ".git", "storage", "cache"}
-    edges = []
-    files = []
+    files = {}
     for dirpath, dirnames, filenames in os.walk(repo):
         dirnames[:] = [d for d in dirnames if d not in skip and not d.startswith(".")]
         for name in filenames:
             if not name.endswith(".php"):
                 continue
-            path = os.path.join(dirpath, name).replace("\\", "/")
+            path = os.path.join(dirpath, name)
             rel = os.path.relpath(path, repo).replace("\\", "/")
-            files.append(rel)
             try:
                 lines = open(path, encoding="utf-8", errors="ignore").read().splitlines()
             except OSError:
                 continue
-            for n, line in enumerate(lines, 1):
-                stripped = line.strip()
-                if "include" not in stripped and "require" not in stripped:
-                    continue
-                edges.append("%s:%d includes %s" % (rel, n, stripped[:120]))
-    included = set()
-    for edge in edges:
-        included.add(edge.split(" includes ", 1)[-1])
+            files[rel] = lines
+    funcs = {}
+    for rel, lines in files.items():
+        for n, line in enumerate(lines, 1):
+            m = re.search(r"function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", line)
+            if m:
+                funcs.setdefault(m.group(1), []).append("%s:%d" % (rel, n))
     print("PHP TRACE")
-    print("entries:")
-    for rel in files:
+    calls = 0
+    for rel, lines in files.items():
         if entry and entry not in rel:
             continue
-        print("  " + rel)
-    print("includes:")
-    shown = 0
-    for edge in edges:
-        if entry and entry not in edge.split(" includes ", 1)[0]:
-            continue
-        print("  " + edge)
-        shown += 1
-        if shown >= 40:
-            print("  ... truncated")
+        for n, line in enumerate(lines, 1):
+            inc = re.search(r"(include|require)(_once)?\s*\(?\s*['\"]([^'\"]+\.php)", line)
+            if inc:
+                print("  %s:%d includes %s" % (rel, n, inc.group(3)))
+            call = re.search(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(", line)
+            if not call:
+                continue
+            name = call.group(1)
+            if name in ("if", "for", "while", "switch", "catch", "function", "array", "isset", "empty"):
+                continue
+            targets = funcs.get(name) or []
+            if not targets:
+                continue
+            print("  %s:%d -> %s:%s" % (rel, n, name, targets[0]))
+            calls += 1
+            if calls >= 40:
+                print("  ... truncated")
+                break
+        if calls >= 40:
             break
     print("PHP TRACE: PASS" if files else "PHP TRACE: FAIL no php files")
     return 0 if files else 1

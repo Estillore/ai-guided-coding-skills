@@ -307,6 +307,8 @@ AI writes tests + implementation to disk and runs them. No human typing step.
 7. **Coverage gate (when relevant)**
    Run the coverage command and require 80%+ branches / functions / lines / statements on the touched code. Fix or add tests until green.
 
+   If the repo has no test runner, do not invent PHPUnit. Evidence is `php -l` on the chain plus `php.repro`.
+
 8. **Stop**
    Do not continue implementing further features without an explicit request.
 

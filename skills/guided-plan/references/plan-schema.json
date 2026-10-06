@@ -4,7 +4,8 @@
   "description": "Typed intermediate representation for a guided-plan. The planner agent/skill emits this JSON; the harness gate `guided_run.py validate-plan` must PASS before guided-builder starts. Archify-style: typed IR + deterministic gate instead of prose-only plans.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["goal", "blast_radius", "steps", "test_strategy", "done_criteria", "source_of_standards"],
+  "required": ["goal", "blast_radius", "steps", "test_strategy", "done_criteria", "php_call": {"type": "string"},
+    "source_of_standards"],
   "properties": {
     "goal": { "type": "string", "minLength": 10 },
     "non_goals": { "type": "array", "items": { "type": "string" } },

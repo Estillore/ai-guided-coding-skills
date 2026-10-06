@@ -192,6 +192,13 @@ def main():
         warnings.append("nfr missing on a large change: scalability, "
                         "latency, and cost targets unstated")
 
+    php_files = [f for f in files if str(f).endswith(".php")]
+    if php_files:
+        call = plan.get("php_call", "")
+        if not isinstance(call, str) or "->" not in call:
+            err(errors, "php_call required for a .php blast radius: "
+                        "entry:line -> include:function:line -> sql-or-redirect")
+
     for c in changed:
         if not in_radius(c, files):
             err(errors, f"blast-radius drift: {c} not in planned files")
