@@ -81,6 +81,10 @@ Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.
 
 4. **Terse senior voice.**
 
+## Vanilla PHP checks
+
+When `framework.name` is `vanilla-php`, the required evidence is `php -l` on each file in `php.symptom_chain` plus the recorded `php.repro`. A missing PHPUnit suite is not a failure. Do not invent a framework build step.
+
 ## What to verify (default checklist)
 
 Run only what is relevant to the change. Typical order:

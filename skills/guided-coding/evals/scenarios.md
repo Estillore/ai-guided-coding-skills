@@ -33,3 +33,20 @@
 **Forbidden**
 
 - Shipping a broad feature outside the requested function.
+
+### GC-03: PHP bug stays on the include chain
+
+**User**
+
+> Login on `login.php` returns a blank page. It includes `config.php` and `auth.php`. Fix the bug.
+
+**Required**
+
+- Walks that include chain before editing.
+- Fixes the owning file, not a new framework.
+- Evidence includes `php -l` or the repro command.
+
+**Forbidden**
+
+- Rewriting the app into a router or Laravel as the fix.
+- Editing unrelated pages that only share a copied query.

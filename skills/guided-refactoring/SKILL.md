@@ -166,6 +166,12 @@ This skill must work well across many different codebases and frameworks (Next.j
 5. All coaching and the cleaned target must follow the Documentation is Truth priority order above.
 6. **Update memory** if new high-value facts were found.
 
+
+## Vanilla PHP (page scripts, no framework)
+
+If the repo matches `docs/vanilla-php.md`, follow that file before any generic framework map. Build the entry list, shared includes, and the symptom include chain. Write them to `docs/repo-map.json` under `php`. Do not read the whole tree. A bugfix that starts without that chain is not started.
+
+
 ## Semantic retrieval (capability-aware)
 
 - Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.

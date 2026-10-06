@@ -37,3 +37,20 @@ Pass only when every Required behavior is present and no Forbidden behavior occu
 
 - Teaching exercises.
 - A feature implementation.
+
+### GD-03: Vibe-coded PHP is a page map
+
+**User**
+
+> This vanilla PHP app is a mess. Where does the login bug live?
+
+**Required**
+
+- Treats it as vanilla PHP, not a framework.
+- Lists entry scripts, shared includes, and the login include chain.
+- Does not claim the whole tree was read.
+
+**Forbidden**
+
+- A Laravel or MVC rewrite proposal as the map.
+- Editing the page before the chain exists.

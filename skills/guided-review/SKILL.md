@@ -153,6 +153,10 @@ When the code under review is a React project, deterministic scanner evidence fe
    - Findings map to severity: `error` → CRITICAL/HIGH pipeline (auto-fix), `warning` → MEDIUM/LOW follow-ups — each still passes the confidence gate above before reporting.
    - Respect the repo's `doctor.config.*`; never re-implement react-doctor rules here — consume its JSON.
 
+## Vanilla PHP bug review
+
+On vanilla PHP, review the symptom include chain from `docs/vanilla-php.md`, not the whole repo. A finding outside that chain needs a reason. Blank pages, double includes, header-already-sent, and concatenated SQL in the chain outrank style nits.
+
 ## PHP lane (deterministic auditors — external tools, never bundled)
 
 When the code under review is a PHP project, deterministic auditor evidence feeds the review. The skill stays the judge:

@@ -76,6 +76,12 @@ Only record what will still be useful next week. Prune ruthlessly.
 
 After mapping a project, emit/update `docs/repo-map.json` (fallback: `.kiro/repo-map.json` or `.grok/repo-map.json`) matching `references/repo-map-schema.json`: framework + version, entry points, domains, dependency direction, structure style, conventions, gotchas, and the real test commands. Every later phase (plan, coding, review, verify) loads this file instead of re-discovering. Update it when the architecture changes.
 
+
+## Vanilla PHP (page scripts, no framework)
+
+If the repo matches `docs/vanilla-php.md`, follow that file before any generic framework map. Build the entry list, shared includes, and the symptom include chain. Write them to `docs/repo-map.json` under `php`. Do not read the whole tree. A bugfix that starts without that chain is not started.
+
+
 ## Semantic retrieval (capability-aware)
 
 - Prefer a host-provided LSP or equivalent semantic tool for symbol discovery, definitions, references, implementations, hover, and call hierarchy.

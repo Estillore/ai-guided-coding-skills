@@ -37,3 +37,7 @@ SKIP is allowed only when the host cannot run the command. Say which host limit 
 ## Memory
 
 Read `docs/guided-memory.md` when it exists. Update it after a real discovery. If `AGENTS.md` exists and has no pointer, add one line naming `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+
+## Vanilla PHP
+
+Page-script PHP uses `docs/vanilla-php.md`. Map the symptom include chain before editing. Do not treat a missing framework as permission to rewrite the app.
