@@ -1441,8 +1441,24 @@ def cmd_php_audit(args):
                       % (mark, s["step"], s["errors"], s["warnings"]))
         errs = sum(s.get("errors", 0) for s in steps)
         warns = sum(s.get("warnings", 0) for s in steps)
+        ran = [s for s in steps if "skipped" not in s and "not_run" not in s]
+        code_ran = [s for s in ran if s.get("step") in ("phpstan", "pint", "rector")]
+        audit = next((s for s in steps if s.get("step") == "composer-audit"), {})
+        audit_unread = (audit and "skipped" not in audit and "error" not in audit
+                        and audit.get("rc") not in (0, None)
+                        and not audit.get("errors") and not audit.get("warnings"))
         if all("skipped" in s for s in steps):
             status = "SKIP"
+        elif not code_ran:
+            # composer-audit alone is not a PHP modernization. A tree with no
+            # phpstan/pint/rector must not look cleaner than one that ran them.
+            status = "SKIP"
+            print("[SKIP] php-audit -> no phpstan, pint, or rector installed; "
+                  "not a code audit")
+        elif audit_unread:
+            status = "FAIL"
+            print("[ERROR] composer-audit -> exit %s with no parsed advisories"
+                  % audit.get("rc"))
         elif blocking == "error" and errs:
             status = "FAIL"
         elif blocking == "warning" and (errs + warns):
