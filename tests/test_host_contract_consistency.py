@@ -11,11 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 MEMORY_SKILLS = (
     "guided-plan",
-    "guided-planner",
     "guided-coding",
     "guided-tdd",
     "guided-review",
-    "guided-code-reviewer",
     "guided-docs",
     "guided-refactoring",
     "guided-verify",
@@ -76,13 +74,12 @@ class HostContractConsistencyTest(unittest.TestCase):
             text,
         )
 
-    def test_planner_skill_points_at_guided_plan(self):
-        text = read("skills/guided-planner/SKILL.md")
-        self.assertIn("Use `guided-plan` full mode.", text)
-        self.assertNotIn("Never write the plan file yourself.", text)
-        self.assertNotIn("chain to Build", text)
-        self.assertNotIn("proceed directly to implementation", text)
-        self.assertNotIn("chains to implementation", text)
+    def test_alias_skills_are_not_installed(self):
+        self.assertFalse((ROOT / "skills" / "guided-planner").exists())
+        self.assertFalse((ROOT / "skills" / "guided-code-reviewer").exists())
+        agent = read("agents/guided-planner.json")
+        self.assertIn("skills/guided-plan/SKILL.md", agent)
+        self.assertNotIn("skills/guided-planner/SKILL.md", agent)
 
     def test_tdd_skill_writes_and_runs(self):
         text = read("skills/guided-tdd/SKILL.md")
@@ -117,9 +114,6 @@ class HostContractConsistencyTest(unittest.TestCase):
         self.assertNotIn("chain to `guided-verify`", review)
         self.assertNotIn("| **Build** |", review)
 
-        companion = read("skills/guided-code-reviewer/SKILL.md")
-        self.assertIn("Use `guided-review`.", companion)
-        self.assertNotIn("the human should type", companion)
 
     def test_quality_reference_does_not_coach_typing(self):
         text = read("skills/guided-coding/references/quality-rules.md")

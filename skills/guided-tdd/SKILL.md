@@ -24,7 +24,7 @@ This is the TDD specialist companion to `guided-coding`. Prefer this when the ta
 | Need a short plan first | → `guided-plan` |
 | Ready to implement a feature | → `guided-coding` (or stay here for pure TDD) |
 | Code is messy | → `guided-refactoring` |
-| Implementation done | → `guided-review` or `guided-code-reviewer` |
+| Implementation done | → `guided-review` |
 | Check tests & coverage | → `guided-verify` |
 
 **Default happy path (automation loop)**

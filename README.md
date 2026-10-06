@@ -315,16 +315,16 @@ python ~/.guided/scripts/guided_run.py verify --repo . --plan plan.json
 | `guided-docs` | Mental model and key things to remember |
 | `guided-buddy` | AI-assisted apprenticeship with bounded Pair/Delegate edits |
 | `guided-plan` | Short or full testable plan |
-| `guided-planner` | Deeper planner companion |
 | `guided-coding` | Implementation + strong TDD |
 | `guided-tdd` | Pure red → green → refactor |
 | `guided-refactoring` | Clean messy / vibe-coded code |
 | `guided-review` | Quality + security review |
-| `guided-code-reviewer` | Code-review companion |
 | `guided-verify` | Commands, expected results, minimal fixes |
 | `guided-infra` | Infra + architecture growth roadmap (Now/Next/Later) |
 
 Install always copies from the `skills/` folder (canonical source).
+
+`agents/guided-planner.json` is the read-only planner agent. It loads `guided-plan` and `guided-docs`. It is not a skill. Review uses `guided-review`; the reviewer agent is `agents/guided-reviewer.json`.
 
 ---
 
