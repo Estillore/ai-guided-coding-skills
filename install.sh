@@ -50,6 +50,7 @@ install_opencode() {
   if [[ -d "$AGENTS_DIR/opencode" ]]; then
     mkdir -p "$HOME/.config/opencode/agent"
     cp "$AGENTS_DIR"/opencode/*.md "$HOME/.config/opencode/agent/"
+    rm -f "$HOME/.config/opencode/agent/guided-tdd.md"
   fi
   echo "OK  OpenCode -> $HOME/.config/opencode/skills"
   echo "    agents   -> $HOME/.config/opencode/agent/guided-*.md"

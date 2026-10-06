@@ -1,13 +1,15 @@
 ---
 name: guided-code-reviewer
-description: Autonomous rigorous code review that auto-fixes. AI finds concrete issues with exact lines and failure modes, applies minimal fixes for CRITICAL/HIGH, and lists the rest. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use for review, code review, security review, what should I strengthen, or after implementation before merge.
+description: Pointer to guided-review. Use for review, code review, security review, what should I strengthen, or after implementation before merge. Auto-fix only when the active host can edit. Works in Kiro, Grok, OpenCode, and Zed.
 ---
 
 # Guided Code Reviewer
 
+Use `guided-review`.
+
 ## Overview
 
-Force the AI into autonomous code review. The AI finds confident, actionable issues (with proof for HIGH/CRITICAL), applies minimal fixes for must-fix items, and reports the rest.
+This skill is the strict review entry. Follow `guided-review`. Auto-fix CRITICAL and HIGH only when the active host can edit. The OpenCode `guided-reviewer` subagent is read-only and does not edit.
 
 **Core contract**
 - AI applies minimal fixes for CRITICAL/HIGH directly.
@@ -32,15 +34,15 @@ guided-docs → guided-plan → guided-coding → guided-refactoring → guided-
 
 ## Project Memory
 
-Load project memory first (`.grok/project-memory.md`, `.kiro/project-memory.md`, or `AGENTS.md`). Prefer project conventions over generic advice. When running in OpenCode, update findings that become permanent conventions into `AGENTS.md`.
+Read `docs/guided-memory.md` first. Prefer project conventions over generic advice. Update `docs/guided-memory.md` when a finding becomes a permanent convention. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 ## OpenCode support
 
-Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible locations). Works with Plan (read-only review) and Build (AI auto-fixes must-fix findings). Follows the same Agent Skills standard as the rest of the guided family.
+Install to `~/.config/opencode/skills/` or `.opencode/skills/`. The `guided-review` primary applies fixes. The `guided-reviewer` subagent is read-only and does not edit.
 
 ## Zed support
 
-Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-code-reviewer` or `@guided-code-reviewer`. Prefer updating `AGENTS.md`.
+Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-review` on the Write profile. Record facts in `docs/guided-memory.md`.
 
 ## Coaching Process
 
@@ -76,7 +78,7 @@ For each finding use:
 File: path:line
 Issue: concrete description of the failure mode
 Why existing guards do not catch it: ...
-Minimal fix: [show the exact code the human should type]
+Minimal fix: [the edit to apply when the host can write]
 ```
 
 ### 5. Auto-fix decision

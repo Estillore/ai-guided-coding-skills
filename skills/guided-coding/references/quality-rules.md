@@ -50,7 +50,7 @@ Treat schema and queries as one concern. The schema exists to make the current q
 - Explicit primary key. Add foreign keys and indexes only for columns you actually query or join on.
 - Prefer clear, readable DDL or the project’s existing migration style (Documentation-is-Truth).
 - Avoid over-normalization and clever abstractions. Boring and obvious wins.
-- Show the exact migration or `CREATE`/`ALTER` the human should type.
+- Write the exact migration or `CREATE`/`ALTER` to disk.
 
 **Queries**
 - Always use prepared statements or parameterized queries. Never concatenate user input into SQL.

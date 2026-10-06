@@ -29,16 +29,36 @@ Use `guided-buddy` when you want to learn rather than delegate the whole task. I
 Skills use the open **Agent Skills** format (`SKILL.md`), so the same folders work across these tools.
 
 > **Kiro extras:** `agents/*.json` (orchestrator + planner/builder/reviewer) and `steering/ponytail.md`  
-> **OpenCode extras:** `agents/opencode/*.md` — 6 primary agents plus 3 read-only specialist subagents, per-phase permissions, and no primary-agent auto-chaining
+> **OpenCode extras:** `agents/opencode/*.md` — 6 primary agents plus 3 read-only specialist subagents, per-phase permissions, a shared read-only shell allowlist for planner + architect, and no primary-agent auto-chaining
 > Grok and Zed load coaching rules from each skill’s `SKILL.md`.
 
 ### OpenCode agent runtime
 
 The five guided automation modes are **Primary-agent orchestrators**, not repeated skill wrappers. Their compact agent prompts own the normal phase loop; matching skills provide **optional, on-demand skill guidance** only when an advanced mode needs more detail. `guided-buddy` remains a deliberate single-agent coaching mode.
 
-Complex work can use three **read-only specialist subagents**: `guided-architect`, `guided-tdd`, and `guided-reviewer`. OpenCode built-in `explore` handles broad repository discovery. Specialists cannot edit or recurse; the primary remains the only writer and owns final verification.
+Complex work can use three **read-only specialist subagents**: `guided-architect`, `guided-test-design`, and `guided-reviewer`. OpenCode built-in `explore` handles broad repository discovery. Specialists cannot edit or recurse; the primary remains the only writer and owns final verification.
+
+`guided-architect` **owns the architecture decision** for its slice: it frames measurable constraints, grounds them in measured current state, makes one call with a named rejection and an exit cost, and says so when a change does not need architecture at all. `guided-plan` carries that decision into the Plan IR; overruling it requires a written reason.
+
+`guided-plan` and `guided-architect` share one **read-only shell allowlist**: git inspection subcommands, `rg`/`grep`, file listings, and the `validate-plan` gate. Enforced at the level of the parsed command, with `deny` as the catch-all and explicit denies for write- and exec-capable flags (`--output`, `--pre`, `-O`, `tee`, interpreters). `find` and `fd` are deliberately excluded — `-delete` and `-exec` turn them into writers. This is a command-name and flag allowlist, not a sandbox: it blocks the documented primitives, it does not prove absence of all others. `guided-test-design` and `guided-reviewer` keep `bash: deny` because both are scoped to files the parent hands them. `guided-plan` may write `docs/plans/*.json` and `docs/guided-memory.md`. The plan file is what makes the mandated `validate-plan` gate reachable.
+
+> Known gap: `guided-docs` and `guided-infra` have no OpenCode agent. They remain skill-only: invoke `/guided-docs` or `/guided-infra` from a writable primary.
 
 After reinstalling agent files, **Quit and restart OpenCode**. Running sessions keep the configuration that was loaded at startup.
+
+## Host phase contract
+
+One behavior per phase. A phase skill does not auto-chain into the next skill. It finishes its own work, names the next phase, and stops. The Kiro `guided` orchestrator is the only runtime that still runs the loop for you.
+
+| Host | How to start a phase | What that phase may do |
+|------|----------------------|------------------------|
+| OpenCode | Select the matching primary (`guided-plan`, `guided-coding`, `guided-refactoring`, `guided-review`, `guided-verify`, `guided-buddy`) before the slash skill | The primary's permissions apply. A slash skill inside Build does not. |
+| Zed | Paste **Guided Plan** or **Guided Buddy** for read-only work. Use the Write profile for every other phase | Guided Plan delivers the plan in chat and does not run `validate-plan`. |
+| Kiro / Grok | Invoke the skill | The skill writes and runs its own phase, then stops. |
+
+`guided-test-design` is the read-only OpenCode specialist. It designs the failing test. The `guided-tdd` skill, and the `guided-coding` primary, write that test and run it.
+
+OpenCode loads skills from both `~/.config/opencode/skills` and `~/.agents/skills`. Installing OpenCode and Zed registers the same skills twice. Restart OpenCode after an agent install so the new files replace a retired `guided-tdd` agent.
 
 ## Optional LSP retrieval
 
@@ -212,7 +232,7 @@ Natural language also works, for example:
 guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
-`guided-refactoring` always runs after coding as the quality-maintenance step (auto-skips when clean), so review + verify check already-maintained code.
+Recommend `guided-refactoring` after coding. It does not auto-chain. Review and verify run only when you invoke them.
 
 When the change touches infrastructure (or growth signals cross), `guided-verify` appends a growth watch and points to `guided-infra`, which turns signals into a staged Now/Next/Later roadmap (Docker reliability, Cloudflare edge, data scale, architecture rungs).
 
@@ -242,7 +262,7 @@ Simple tasks run single-agent with the loop above. Complex/multi-slice work spli
 
 Two archify-inspired artifacts make phases machine-checkable instead of prose-only:
 
-- **Plan IR** (`skills/guided-plan/references/plan-schema.json`) — typed plan JSON (goal, blast radius, steps, test strategy, invariants, outbox, accuracy, done criteria). Gate: `python ~/.guided/scripts/guided_run.py validate-plan <plan.json> [--changed <files>]` must print `PLAN IR: PASS` before building; verify re-runs it with `--changed` to catch blast-radius drift.
+- **Plan IR** (`skills/guided-plan/references/plan-schema.json`) — typed plan JSON (goal, blast radius, steps, test strategy, invariants, outbox, accuracy, done criteria, optional `nfr` for measurable non-functional targets). Gate: `python ~/.guided/scripts/guided_run.py validate-plan <plan.json> [--changed <files>]` must print `PLAN IR: PASS` before building; verify re-runs it with `--changed` to catch blast-radius drift.
 - **Repo-map** (`skills/guided-docs/references/repo-map-schema.json`) — structured snapshot (`docs/repo-map.json`) with framework, entry points, dependency direction, conventions, and real test commands. Emitted by guided-docs, loaded by every later phase instead of re-discovering.
 
 ---

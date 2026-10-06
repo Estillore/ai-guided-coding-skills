@@ -36,7 +36,25 @@
         "required": ["decision", "why"],
         "properties": {
           "decision": { "type": "string" },
-          "why": { "type": "string" }
+          "why": { "type": "string" },
+          "exit_cost": { "type": "string" }
+        }
+      }
+    },
+    "nfr": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Non-functional targets the design must satisfy. Optional, but a large change without it warns: the constraints were never stated. Anything the human never specified belongs in assumptions, never silently assumed.",
+      "properties": {
+        "growth_horizon": { "type": "string" },
+        "scalability": { "type": "string" },
+        "latency": { "type": "string" },
+        "availability": { "type": "string" },
+        "cost_ceiling": { "type": "string" },
+        "security": { "type": "string" },
+        "assumptions": {
+          "type": "array",
+          "items": { "type": "string" }
         }
       }
     },

@@ -1,6 +1,6 @@
 ---
 name: guided-plan
-description: Produce a short testable plan and proceed to implementation. AI outputs the complete plan (goals, constraints, structure, key decisions, test strategy, blast radius 1-3 files) and updates project memory directly. In fully autonomous runs AI proceeds to guided-coding without waiting. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for plan, architecture, phased plan, or decide the structure first.
+description: Produce a short testable plan and stop. AI outputs the complete plan (goals, constraints, structure, key decisions, test strategy, blast radius 1-3 files) and updates docs/guided-memory.md. Does not implement and does not auto-chain. Works in any Kiro workflow (especially Plan and Spec), in Grok, in OpenCode, and in Zed. Use for plan, architecture, phased plan, or decide the structure first.
 ---
 
 # Guided Plan
@@ -11,8 +11,8 @@ Force a short, high-quality plan before implementation. This prevents wasted cod
 
 **Core contract**
 - AI outputs the complete minimal plan (goals, constraints, structure, key decisions, test strategy, blast radius).
-- AI updates project memory directly with new architecture facts.
-- In fully autonomous runs AI proceeds to `guided-coding` without waiting for approval.
+- AI updates `docs/guided-memory.md` with new architecture facts.
+- Stop after the plan. Do not implement and do not invoke another guided phase.
 
 This skill sits between understanding and implementation:
 
@@ -26,8 +26,8 @@ This skill sits between understanding and implementation:
 
 Before planning, check for project memory:
 
-- Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md` (Kiro) or `AGENTS.md` (OpenCode)
-- Fallbacks: `docs/project-notes/key_facts.md`, `CLAUDE.md`
+- Read `docs/guided-memory.md` when it exists. Also read `docs/repo-map.json`.
+- Fallbacks for reading only: `.grok/project-memory.md`, `.kiro/project-memory.md`, `docs/project-notes/key_facts.md`. Do not append a project-memory section to `AGENTS.md`. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`.
 
 **Memory health check (quick)**  
 Note whether useful memory was found. If missing or very thin, create or expand it after the first useful discovery.
@@ -35,7 +35,7 @@ Note whether useful memory was found. If missing or very thin, create or expand 
 **If present** → load it first and treat it as known ground truth. Do not re-discover known architecture.
 
 **Self-regeneration**  
-After a useful planning session that reveals new architecture facts, decisions, or constraints, update the memory file (prefer `.kiro/project-memory.md` inside Kiro, or a Project Memory section in `AGENTS.md` inside OpenCode). Keep entries short and high-value only. High-value facts (framework, structure style, source of standards) can be written without confirmation.
+After a useful planning session that reveals new architecture facts, decisions, or constraints, update `docs/guided-memory.md`. Keep entries short and high-value only. High-value facts (framework, structure style, source of standards) can be written without confirmation.
 
 ### Memory file format (keep it tiny)
 
@@ -83,16 +83,13 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 
 **Pairing with OpenCode agents**
 
-| OpenCode agent | How to use this skill |
-|----------------|-----------------------|
-| **Plan** | Primary home. Use guided-plan to produce the testable plan while staying read-only. |
-| **Build** | Use only after the plan is accepted; switch to guided-coding for the implementation steps. |
+Select the `guided-plan` primary. It may write `docs/plans/*.json` and `docs/guided-memory.md`. It does not edit source. When the plan is done, tell the human to switch to `guided-coding`. Then stop.
 
-Prefer updating `AGENTS.md` (OpenCode `/init`) or `.grok/project-memory.md` so later sessions inherit the architecture decisions.
+Shell access on that agent is an inspection allowlist.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-plan` or `@guided-plan`. Prefer updating `AGENTS.md` for project memory.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-plan` or `@guided-plan` on the Guided Plan profile. On the Zed Guided Plan profile, deliver the plan in chat and stop. That profile cannot write files or run a terminal, so it does not run validate-plan. Record facts in `docs/guided-memory.md` only after the human switches to a profile that can write.
 
 ## Documentation is Truth (highest priority for every recommendation)
 
@@ -127,13 +124,15 @@ Record the chosen source of standards in project memory. When Harness is recomme
 - Read only returned ranges plus the smallest surrounding context; use `glob`/`grep` for strings, configuration, generated files, and unsupported languages.
 - Detect capability before use. If unavailable, fall back to codemap + `glob`/`grep` + ranged `read`, and never claim LSP was used.
 - Treat semantic results as navigation evidence, not verification; run the relevant project checks after changes.
+- Shell inspection (`git log`, `git diff`, `rg`, `wc`) is a separate capability from LSP and is host-dependent: the OpenCode planner and architect have a read-only allowlist, other hosts and the Zed `Guided Plan` profile do not. Detect it, never assume it.
 
 ## Core Rules
 
-1. **AI outputs the complete minimal plan and proceeds. This rule is absolute.**
+1. **AI outputs the complete minimal plan and stops. This rule is absolute.**
    - Present a full short plan, including structure and key decisions.
-   - Update project memory and proceed to implementation in autonomous runs.
-   - Create plan/ADR files directly when the project uses them.
+   - Update `docs/guided-memory.md`.
+   - When the host can write `docs/plans/*.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`.
+   - Stop after the plan. Do not implement and do not invoke another guided phase. Recommend `guided-coding` or `guided-refactoring`, then stop.
 
 2. **Documentation is Truth** (official docs of every library → project convention → canonical).
 
@@ -180,9 +179,10 @@ For most features and bug fixes.
 Activate when the change is large, cross-cutting, or the human asks for architecture / ADR / “how should we structure this?”.
 
 **Extra content** (drawn from ECC architect thinking)
-- Current architecture snapshot (from memory + discovery)
+- Current architecture snapshot (from memory + discovery) — measured, not recalled. Use `git log`/`git blame` to learn *why* the code looks as it does before proposing changes to it.
 - Proposed structure (layers, boundaries, dependency direction)
-- Key trade-offs and the recommended decision
+- Key trade-offs and the recommended decision, plus its exit cost (how hard to undo)
+- When scale or maintainability is the question, a per-feature growth table: coupling and scalability signal per feature, ranked by signal strength
 - Migration or sequencing notes if the change is not green-field
 - Still keep it short — architecture mode is denser, not longer for its own sake
 
@@ -191,7 +191,7 @@ Activate when the change is large, cross-cutting, or the human asks for architec
 - Force a short map of the *relevant slice only* (package, ownership, entry points).
 - Declare expected blast radius (files touched). Default to 1–3 files. Larger changes need explicit justification.
 - Include a short recommended Harness composition (mode + key constraints) using official patterns.
-- Keep the same contract: AI outputs the plan, saves it, and proceeds. Never leave Harness output as the only artifact.
+- Keep the same contract: output the plan and stop. Never leave Harness output as the only artifact.
 
 ### 3. Full plan mode (ECC-style)
 
@@ -259,7 +259,7 @@ Activate when the human already has a design or structure in mind. Trigger phras
 2. Map it onto the existing codebase + official docs (Documentation is Truth).
 3. Surface only friction points, missing pieces, risks, or tiny adaptations needed.
 4. Never propose a different architecture or “better” structure unless the human explicitly asks for critique.
-5. Help the human refine *their* plan so they can type the final version themselves.
+5. Help the human refine *their* plan. Write that plan when the host can write. Do not implement it.
 
 **Output shape**
 - Your design (restated)
@@ -275,22 +275,26 @@ This mode exists to keep the AI in the assistant seat and the human as the owner
 1. **Load context**  
    Memory + Adaptability summary if needed. Restate the goal in 1–2 sentences.
 
-2. **Clarify only if necessary**  
+2. **Frame the constraints**  
+   Convert the goal into measurable targets: growth horizon, load, latency, availability, cost ceiling, security. Anything the human never specified goes into `nfr.assumptions` — name it, never assume it silently. "It should scale" is not a requirement; "20k orders/day in 12 months, p95 < 300ms, 2 devs" is.
+
+3. **Clarify only if necessary**  
    Ask at most 1–2 sharp questions when the scope or constraints are ambiguous. Prefer making a reasonable assumption and stating it.
 
-3. **Show the complete plan**  
+4. **Show the complete plan**  
    Choose Short (default), Architecture, Full, or **Human Design Support** mode as appropriate. Apply Ponytail ruthlessly.  
    When the human already has a design, prefer Human Design Support mode.
-4. **Apply it + Plan IR gate (mandatory)**
-   Save the final plan to memory (and to a plan/ADR file when the project uses one).
-   Emit the Plan IR as JSON matching `references/plan-schema.json` (shape example: `examples/plan-ir.example.json — structural reference only, never copy its facts`) and run the validator:
-   `python ~/.guided/scripts/guided_run.py validate-plan <plan.json>` (harness entry; raw script lives at `scripts/` in the skills repo).
-   Fix the plan until it prints `PLAN IR: PASS`. `guided-builder` must not start on a FAIL.
-   In autonomous runs proceed directly to `guided-coding` (or `guided-refactoring` for cleanup).
+5. **Apply it + Plan IR gate (mandatory)**
+   Save the final plan to memory. Emit the Plan IR as JSON to `docs/plans/<slug>.json` matching `references/plan-schema.json` (shape example: `examples/plan-ir.example.json — structural reference only, never copy its facts`) and run the validator:
+   `python ~/.guided/scripts/guided_run.py validate-plan docs/plans/<slug>.json` (harness entry; raw script lives at `scripts/` in the skills repo).
+   When the host can write `docs/plans/*.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`. `guided-builder` must not start on a FAIL, and never on a missing IR.
+   On the Zed Guided Plan profile, deliver the plan in chat and stop. That profile cannot write files or run a terminal, so it does not run validate-plan.
+   Carry the architect's `Decision` block into `key_decisions` (with `exit_cost`), `invariants`, `accuracy.arch_rules`, and `nfr`. If you overrule the architect, record the reason in one line — silence is not an override.
+   Stop after the plan. Do not implement and do not invoke another guided phase. Recommend `guided-coding` (or `guided-refactoring` for cleanup).
 
-5. **Update memory** (if new decisions are high-value)
+6. **Update memory** (if new decisions are high-value)
 
-6. **Hand off**  
+7. **Hand off**  
    Actively recommend the next skill based on the situation:
 
 | Human situation | Recommend |
@@ -299,6 +303,7 @@ This mode exists to keep the AI in the assistant seat and the human as the owner
 | Plan is about cleaning messy existing code | → `guided-refactoring` |
 | Still missing mental model of a library or area | → `guided-docs` |
 | Plan is done and code already exists | → `guided-review` then `guided-verify` |
+| The whole app is growing and needs a scale/maintainability audit | → `guided-infra` (repo-wide, infra + evolution ladder) — not this skill |
 
 Always state the recommendation clearly.
 
@@ -308,7 +313,7 @@ Always state the recommendation clearly.
 guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
 
-`guided-refactoring` always runs after coding (auto-skips when clean) so review + verify check already-maintained code.
+Recommend `guided-refactoring` after coding, then stop. Do not auto-chain. Review and verify run only when the human invokes them.
 
 Harness guidance surfaces passively inside guided-plan (Architecture mode) and guided-coding (Harness Power Mode) when the work is agentic. No separate skill required.
 
@@ -323,7 +328,8 @@ Harness guidance surfaces passively inside guided-plan (Architecture mode) and g
 
 - Long design documents or multi-page ADRs by default.
 - Inventing new architectural layers the project does not already use.
-- Editing the codebase or creating files without explicit request.
+- Implementing source code from this skill.
+- Auto-chaining into `guided-coding`.
 - Proceeding straight to code without a plan when the change is non-trivial.
 - Vague plans that cannot be turned into tests or a clear definition of done.
 

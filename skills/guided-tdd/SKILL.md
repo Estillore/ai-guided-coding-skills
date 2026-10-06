@@ -1,6 +1,6 @@
 ---
 name: guided-tdd
-description: Autonomous strict Test-Driven Development. AI writes the failing test (RED), implements the minimal fix (GREEN), refactors, runs coverage, and auto-fixes. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want TDD, write tests first, Red-Green-Refactor, or enforce 80%+ coverage.
+description: Autonomous strict Test-Driven Development. AI writes the failing test (RED), runs it, implements the minimal fix (GREEN), refactors, and runs coverage. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want TDD, write tests first, Red-Green-Refactor, or enforce 80%+ coverage. The OpenCode subagent guided-test-design only designs the case. This skill writes and runs it.
 ---
 
 # Guided TDD
@@ -34,15 +34,15 @@ guided-docs → guided-plan → guided-tdd / guided-coding → guided-refactorin
 
 ## Project Memory
 
-Before any coaching, check for project memory (`.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md`). Treat existing contents as ground truth. Update after meaningful discoveries (prefer `AGENTS.md` when running in OpenCode).
+Read `docs/guided-memory.md` when it exists and treat it as ground truth. Update it after meaningful discoveries. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 ## OpenCode support
 
-Install to `~/.config/opencode/skills/` or `.opencode/skills/` (or Claude-compatible paths). Works with Plan and Build; automation contract — AI writes + runs RED/GREEN/REFACTOR and auto-fixes.
+Install to `~/.config/opencode/skills/` or `.opencode/skills/`. Invoke this skill from the `guided-coding` primary, or run it as the writable skill. `guided-test-design` is read-only and only returns the RED case. Write the failing test to disk and run it.
 
 ## Zed support
 
-Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-tdd` or `@guided-tdd`. Prefer updating `AGENTS.md`.
+Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-tdd` or `@guided-tdd` on the Write profile. Write the failing test to disk and run it. Record facts in `docs/guided-memory.md`.
 
 ## Automation Process (strict)
 
@@ -51,7 +51,7 @@ Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke w
 - Ask only if success criteria or edge cases are ambiguous.
 
 ### 2. Write the RED test (complete & minimal)
-Write the full test file or test case to disk that fails for the right reason. Include:
+Write the failing test to disk and run it. Include:
 - Exact file path
 - Imports
 - The assertion that encodes the requirement
@@ -95,10 +95,9 @@ Run the coverage command and require 80%+ branches/functions/lines/statements on
 
 ## Output style
 
-- Always show complete, copy-paste-ready (but human must type) code blocks with exact paths.
-- One tiny coached step at a time.
-- After each human confirmation, advance.
-- Never run `Write`, `Edit`, or create files yourself.
+- Write the failing test to disk and run it before any implementation.
+- Apply the minimal implementation with edit tools. Report `file:line` and the command output.
+- Recommend the next phase and stop. Do not auto-chain.
 
 ## When to prefer this over guided-coding
 

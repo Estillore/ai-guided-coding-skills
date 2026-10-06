@@ -117,6 +117,10 @@ class ZedProfileSnippetTest(unittest.TestCase):
         self.assertIs(self.profiles["guided_buddy"]["tools"]["spawn_agent"],
                       False)
 
+    def test_plan_profile_cannot_spawn_a_writer(self):
+        self.assertIs(self.profiles["guided_plan"]["tools"]["spawn_agent"],
+                      False)
+
     def test_profiles_carry_a_display_name(self):
         for name, profile in self.profiles.items():
             with self.subTest(profile=name):

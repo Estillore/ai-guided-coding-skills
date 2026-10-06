@@ -1,6 +1,6 @@
 ---
 name: guided-coding
-description: Implement the task autonomously with quality guardrails. AI edits code directly, runs tests, and auto-fixes failures. Strong TDD mode with RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Includes Large Codebase Mode and Blast Radius control. Optional Manual Mode for learning and unfamiliar codebases — the human types, the AI coaches with doc templates, codebase mapping, and review. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want implement this feature, fix this bug, red-green-refactor, or ship a change end-to-end.
+description: Implement the task autonomously with quality guardrails. AI edits code directly, runs tests, and auto-fixes failures. Strong TDD mode with RED/GREEN/REFACTOR gates and coverage check, backend/API mode, adaptive frontend/UI mode, codebase mapping, self-regenerative project memory, and Ponytail minimalism. Includes Large Codebase Mode and Blast Radius control. Learning and coaching belong to guided-buddy. Works in any Kiro workflow, in Grok, in OpenCode, and in Zed. Use when you want implement this feature, fix this bug, red-green-refactor, or ship a change end-to-end.
 ---
 
 # Guided Coding
@@ -14,87 +14,18 @@ Automation mode: the AI implements directly to ship faster while keeping the qua
 - AI runs the relevant checks and auto-fixes failures (max 3 fix loops, then reports).
 - Human approves nothing mid-loop in fully autonomous runs; AI reports evidence at the end.
 
-This is the default operating mode. **Manual Mode** (below) inverts the contract on request: the human types, the AI coaches. Quality rules (Documentation is Truth, Ponytail, TDD, DB invariants, Outbox) still apply in both modes.
-
-## Manual Mode (learn by doing)
-
-Optional mode for learning to code and for working in unfamiliar codebases while staying hands-on. Activate when the human says "manual mode", "let me type", "teach me", "coach me", "don't write it for me", or "odin mode". Deactivate with "take over", "automation mode", or "do it yourself".
-
-**Core contract (mirror image of automation mode)**
-- The human is the driver. The AI never edits files while this mode is active.
-- The AI provides goals, requirements, doc templates, and codebase context — never the finished solution.
-- The AI reviews each chunk the human types: what works, what's off, why.
-- The AI may autocomplete only the current line or expression the human is stuck on. Never more.
-- Everything the AI shows comes with a *why*, so the human learns instead of copying.
-
-**Two tracks**
-
-1. **Learning track** (Odin principles: requirements, not solutions)
-   - Learn by doing — retention comes from typing and struggling, not from reading solutions.
-   - Doc-reading is the skill — always point at official docs (Documentation is Truth); the endgame is a human who can read docs without an AI.
-   - Projects are practice, not tests — mistakes are expected; fix forward, never judge.
-
-2. **Unfamiliar-codebase track** (productive while learning the terrain)
-   - Give a 3–5 bullet terrain brief before the human touches anything: entry points, where this change lives, conventions, dependency direction. Reuse Adaptability + project memory; never re-discover known facts.
-   - Coach as they edit, so the human ships the task *and* learns the codebase at the same time.
-
-**Task loop (the teaching bridge)**
-```
-terrain brief → goal + doc template → codebase mapping → human types → review loop → next step
-```
-1. **Terrain brief** — short context on where and how the work fits this codebase (only when needed).
-2. **Goal + doc template** — state the requirement, then show the canonical pattern from the official docs (this is the pattern, not their solution).
-3. **Codebase mapping** — show how that template lands here: which file, which layer, which existing convention to follow (e.g. "in this repo that query belongs in `src/orders/orderRepository.ts`, same style as `loadItems`").
-4. **Human types** — the human adapts the template into their own code. The AI waits.
-5. **Review loop** — one thing right / one thing off with why / one next step. Never rewrite their code.
-
-**Hint ladder (when the human is stuck — climb one rung at a time)**
-1. Question — "What do you think should happen next?"
-2. Doc pointer — "Read section X of the official docs."
-3. Concept — name the idea (e.g. "this is a debounce"), not the code.
-4. Autocomplete — finish the current line or expression only.
-5. Full solution — only when explicitly asked, and always followed by an explanation of why it works.
-
-**TDD in manual mode**
-- The AI writes the failing test (the requirement expressed as spec) — the test is the assignment.
-- The human implements until green and runs the test themselves.
-- The AI reviews the implementation against the test, then guides the refactor.
-
-**Quality bar (unchanged)**
-- Documentation is Truth: doc templates come from official docs, not training-data habits.
-- Ponytail: hints and reviews stay minimal — no speculative architecture.
-- DB invariants, Outbox, security: surface these as review points when the human's code touches them; never let them silently ship unsafe code (validation, auth, SQL injection).
-
-**Anti-patterns (refuse these)**
-- Pasting a full solution without being asked.
-- Rewriting the human's code for them.
-- Skipping the review loop.
-- Making the human guess when a doc pointer or hint is faster and still educational.
+This is the default operating mode. Manual Mode is `guided-buddy`. If the human asks to learn, type the code, or be coached, do not edit. Recommend `/guided-buddy` and stop.
 
 ## Complexity Gate (automatic)
 
 Decide before answering:
 
-**Enter Manual Mode** when the human asks to learn or drive:
+**Hand off to `guided-buddy`** when the human asks to learn or drive:
 - "manual mode", "let me type", "teach me", "coach me", "don't write it for me", "odin mode"
 
-→ Switch to the Manual Mode contract above. The human types; the AI coaches.
+**Stay thin** for a one-line syntax question. Answer it. Do not edit.
 
-**Stay thin (pure skill answer)** when the request is mostly:
-- “how do I…”, “show me the way to…”, “what is the CSS / syntax for…”
-- simple conceptual or one-liner questions (center a div, left/right, basic syntax)
-
-→ Answer directly with the minimal correct pattern. Keep it short. Do not escalate.
-
-**Escalate to the `guided` agent** when the request is clearly real implementation work:
-- “make / create / implement / add a function…”
-- “wire this button / build the behavior…”
-- any code that needs to be written into the project
-
-→ Switch into (or behave as) the `guided` agent and continue under the full automation contract + Ponytail + project memory.
-
-When in doubt on a small request → stay thin.  
-When in doubt on a coding task → escalate.
+**Implement here** when the request is real implementation work. On OpenCode, stay on the `guided-coding` primary. Ask `guided-test-design` for the RED case, then write the test and run it yourself. There is no `guided` orchestrator on OpenCode or Zed.
 
 ## Connected workflow & hand-offs
 
@@ -113,28 +44,14 @@ This skill is the implementation core of the guided family. Actively recommend t
 ```
 guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
-`guided-refactoring` always runs after coding as the quality-maintenance step (auto-skips with a one-line log when the code is already clean). Harness Power Mode activates passively inside guided-coding when agentic strength is needed.
+Recommend `guided-refactoring` after coding, then stop. Do not auto-chain. Harness Power Mode activates passively inside guided-coding when agentic strength is needed.
 
 ## Project Memory (self-regenerative)
 
-Before any Adaptability or coaching work, check for a project memory file:
-
-- Preferred locations (in order):
-  1. `.grok/project-memory.md`
-  2. `.kiro/project-memory.md` (Kiro IDE)
-  3. `AGENTS.md` (OpenCode, Zed, and many agents)
-  4. `docs/project-notes/key_facts.md`
-  5. `CLAUDE.md` if it already contains project knowledge
-
-**Memory health check (quick)**  
-At the start of a real implementation session, note whether useful memory was found. If missing or very thin, create or expand it after the first useful discovery.
-
-**If the file exists** → read it first and treat its contents as known ground truth. Do not re-discover what is already recorded.
-
-**If the file does not exist** → create a minimal `.grok/project-memory.md` (or `.kiro/project-memory.md` when inside Kiro, or append a short Project Memory section to `AGENTS.md` when running in OpenCode or Zed) after the first useful discovery (see format below).
+Read `docs/guided-memory.md` when it exists and treat it as ground truth. Create it when the first high-value fact appears. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 **Self-regeneration rule**  
-After any meaningful discovery (new entry points, layer rules, dependency direction, important convention, or gotcha), update the memory file. Keep entries short. Ask the human for confirmation only when the update is large or opinionated. High-value facts (framework + version, structure style, source of standards) can be written without confirmation. This makes the skill improve itself across sessions without becoming heavy.
+After any meaningful discovery (new entry points, layer rules, dependency direction, important convention, or gotcha), update `docs/guided-memory.md`. Keep entries short. High-value facts (framework + version, structure style, source of standards) can be written without confirmation.
 
 ### Memory file format (keep it tiny)
 
@@ -186,8 +103,8 @@ Kiro discovers them automatically. Type `/` in chat to invoke them as slash comm
 
 **Maximize quality**
 - Start with `/guided-docs` to lock the mental model.
-- Then `/guided-coding` + `/guided-refactoring` for implementation + cleanup.
-- Let the skills keep updating `.kiro/project-memory.md` so later sessions and parallel agents start smarter.
+- Then `/guided-coding` for implementation. Recommend `/guided-refactoring` after it and stop.
+- Let the skills keep updating `docs/guided-memory.md` so later sessions and parallel agents start smarter.
 - Prefer one tiny automated step at a time — this pairs extremely well with Kiro's sequenced task lists.
 
 ## OpenCode support
@@ -200,19 +117,9 @@ These skills follow the open Agent Skills standard and work natively in OpenCode
 
 OpenCode discovers them automatically. Agents see available skills and load them on demand via the native `skill` tool when the description matches (or when you name the skill). You can also place them under `.agents/skills/` for broader compatibility.
 
-**Pairing with OpenCode agents**
+**Pairing with OpenCode primary agents**
 
-| OpenCode agent | How to use this skill |
-|----------------|-----------------------|
-| **Plan** | Ideal default. Plan is read-only. Use guided skills for analysis, docs, planning, and review with zero risk of unwanted edits. |
-| **Build** | Use for implementation. AI edits files directly, runs checks, and auto-fixes. |
-| **Multi-session** | Run guided-docs or guided-plan in one session while another does guided-coding or guided-verify. |
-
-**Maximize speed & quality**
-- Prefer Plan + guided-* for understanding and architecture.
-- For coding work, invoke the skill; AI applies changes immediately and reports evidence.
-- Let the skills update project memory. Prefer writing into `AGENTS.md` (created by OpenCode `/init`) or `.grok/project-memory.md`.
-- One tiny automated step at a time works especially well with OpenCode's parallel sessions and share links.
+Use `guided-coding` for implementation. Use `guided-plan` before a non-trivial change, `guided-review` after it, and `guided-verify` for the evidence pass. Ask `guided-test-design` for the RED case, then write the test and run it in this primary. Each phase stops. The human switches agents. Record facts in `docs/guided-memory.md`.
 
 ## Zed support
 
@@ -227,7 +134,7 @@ Zed discovers them automatically. The agent sees the skill catalog (name + descr
 **How to use**
 - Invoke with `/guided-coding` or `@guided-coding` (or ask “use the guided-coding skill”).
 - Automation contract: AI applies the complete minimal solution directly and reports evidence.
-- Project memory: prefer updating `AGENTS.md`. Personal file: `%APPDATA%\Zed\AGENTS.md` on Windows, `~/.config/zed/AGENTS.md` on macOS/Linux. Project file: `AGENTS.md` or `CLAUDE.md` in the worktree. Fallback: `.grok/project-memory.md`.
+- Project memory: `docs/guided-memory.md`. Invoke `/guided-coding` on Zed's Write profile. There is no Guided Coding profile.
 - Agent profiles: a profile is a tool set plus a default model and carries **no prompt**, so it cannot hold the guided contract on its own. Pair the read-only `Guided Plan` / `Guided Buddy` profiles (`agents/zed/profiles.snippet.jsonc`) with the matching slash command.
 
 **Note**  
@@ -303,7 +210,7 @@ Goal: The human can start contributing correctly and consistently — and a cowo
 
 ## Core Rules (always enforce)
 
-1. **AI implements directly. This rule is absolute** (outside Manual Mode, where the human drives and the AI coaches).
+1. **AI implements directly. This rule is absolute.**
    - Implement the full correct solution, including real business logic and complete tests, by editing files with edit/write tools.
    - Create minimal new files only when they do not exist and are required.
    - Run the relevant check after each change; on failure diagnose, apply the minimal fix, and re-run (max 3 loops).
@@ -390,7 +297,7 @@ AI writes tests + implementation to disk and runs them. No human typing step.
     - [ ] Changes applied by AI and verified
     ```
 
-   Then chain to the next skill (`guided-refactoring` → `guided-review` → `guided-verify`) in fully autonomous runs.
+   Recommend `guided-refactoring`, then `guided-review`, then `guided-verify`. Stop. Do not auto-chain.
 
 **Edge cases the AI must always address in the shown tests**
 
@@ -428,7 +335,7 @@ Activate automatically when the task involves endpoints, routes, controllers, se
 **Database invariants (must surface early)**
 - When a domain rule must always be true (e.g. “a note has exactly one owner”, “email is unique”, “balance cannot go negative”), the AI must propose a database-level enforcement (unique constraint, check constraint, exclusion constraint, or trigger) in addition to application checks.
 - Application checks alone are not enough for invariants that protect against race conditions or direct DB access.
-- **Show the exact, complete migration / DDL the human should type** — same standard as domain code (minimal, ready to paste, with clear up/down if the project uses migrations).
+- Write the exact migration or DDL to disk, with up and down steps when the project uses migrations.
 
 **Reliable event publishing (Transactional Outbox)**
 - When a domain action both writes to the database and publishes an event (WebSocket, queue, EventBus), default to the Transactional Outbox pattern:
@@ -437,7 +344,7 @@ Activate automatically when the task involves endpoints, routes, controllers, se
   3. Mark the outbox row as processed.
 - This prevents the “DB committed but event never published” failure mode under crashes or multi-instance deployments.
 - Only skip the outbox when the human explicitly accepts the rare inconsistency window.
-- **Show the complete minimal outbox table + processor code** the human should type (same quality bar as domain logic).
+- Write the minimal outbox table and processor to disk.
 
 The same Strong TDD workflow above is used; the solutions simply follow backend/API best practices that match the project.
 
@@ -525,13 +432,13 @@ Rules:
 
 #### Using Harness correctly
 
-**What to show the human**
-- Exact, ready-to-type TypeScript plugin (`apply` function or object form) using official Cordis patterns
+**What to apply**
+- The minimal TypeScript plugin (`apply` function or object form) using official Cordis patterns, written to disk
 - Minimal `cordis.yml` / profile composition tuned for small blast radius and scoping
 - Recommended mode (Standard, PTC, Minimal, or Creator) with one-sentence rationale
 - Tool registration when relevant
 
-**Quick start the human can type**
+**Official start command** (apply it only when the task is to start Harness)
 ```
 npx @deepseek-ai/dsh web
 ```
@@ -542,89 +449,21 @@ Official DeepSeek Harness + Cordis docs take priority for any plugin, tool, sess
 
 **After any Harness exploration (mandatory)**
 1. Summarize the valuable parts in 2–4 bullets.
-2. Show the complete minimal owned version the human should type under normal guided-coding.
-3. Explicitly remind:  
-   > “Type the final production version yourself. Do not leave the Harness output as the source of truth.”
+2. Apply the minimal owned version under `guided-coding` and verify it.
+3. Harness output is exploration. The applied files are the source of truth.
 
 **Style**  
 Same terse senior voice. Prefer the smallest plugin or config that works. Ponytail applies to plugins and to change size.
 
-## Quality Layer (lean, context-aware)
+## Language quality
 
-Apply only the rules that match the current file or project. Never dump the full list.
-
-### When TypeScript is used
-- Prefer `strict: true` mindset (no implicit any).
-- Model states with discriminated unions, not optional fields.
-- Prefer `satisfies` over type assertions (`as`).
-- Use `unknown` + narrowing instead of `any`.
-- Prefer `import type` for types.
-- Keep types simple. No complex generics or utility types unless they clearly remove duplication the human already has.
-
-### When React or Next.js is used
-- Default to Server Components. Add `'use client'` only when browser APIs or interactivity are required.
-- Fetch data in parallel. Never create sequential waterfalls.
-- Keep client components small and focused.
-- Prefer native browser features or existing project utilities over new client-side state or effects.
-- Avoid large client bundles. Move logic to the server when possible.
-
-### When Bootstrap (or similar CSS framework) is used
-- Follow the official Bootstrap documentation for the version in the project.
-- Prefer existing Bootstrap components and utility classes over custom CSS when they already solve the need.
-- Keep custom CSS minimal and scoped.
-- Ensure forms, buttons, and navigation stay accessible and consistent with the rest of the project.
-
-### When plain HTML / CSS / vanilla JS is used
-- Stay with the Ponytail ladder + semantic HTML + progressive enhancement.
-- Prefer native browser features over new libraries.
-- Keep CSS simple and maintainable; avoid large frameworks unless the project already uses one.
-
-### When plain JavaScript is used
-- Stay with the Ponytail ladder only. No extra rules.
-- If the project later moves to TypeScript, the TypeScript rules activate automatically and the previous JS structure should already be clean enough to migrate with minimal change.
-
-### When vanilla PHP is used
-- Always start files with `declare(strict_types=1);` when possible.
-- Prefer typed parameters, return types, and properties.
-- Prefer early returns and flat structure over deep nesting.
-- Use built-in PHP functions and the standard library first.
-- Prefer simple functions or small focused classes. Avoid heavy inheritance or large service classes unless the existing project already uses them.
-- Fail fast and explicitly (throw or return clear error values). Never swallow errors silently.
-- Keep each file focused on one clear responsibility without over-engineering.
-
-### Database schema & queries
-
-Treat schema and queries as one concern. The schema exists to make the current queries simple and correct.
-
-**Schema**
-- Smallest table that satisfies the *current* need (YAGNI). No speculative columns.
-- Explicit primary key. Add foreign keys and indexes only for columns you actually query or join on.
-- Prefer clear, readable DDL or the project’s existing migration style (Documentation-is-Truth).
-- Avoid over-normalization and clever abstractions. Boring and obvious wins.
-- Show the exact migration or `CREATE`/`ALTER` the human should type.
-
-**Queries**
-- Always use prepared statements or parameterized queries. Never concatenate user input into SQL.
-- Prefer explicit column lists over `SELECT *`.
-- Keep the first version of the query clear and readable. Optimize only after it works.
-- Prefer simple JOINs + WHERE over deeply nested subqueries when both are correct.
-- Put data access in a dedicated place (repository, query file, or data layer).
-- Use transactions when multiple statements must succeed or fail together.
-
-**Shared rules**
-- Lazy ≠ negligent: keep real constraints (NOT NULL, unique, FK) and validation that protect data integrity.
-- Schema is justified by real queries; queries stay simple because the schema is not over-engineered.
-
-### Switching between JS and TS
-- Produce the same minimal structure in both languages.
-- The only differences should be type annotations and the TypeScript quality rules above.
-- Never force TypeScript features into a pure JS file or vice versa.
+Apply only the matching slice from `references/quality-rules.md`. Do not paste the whole file into the reply.
 
 ## Syntax Anchors (optional, high-selectivity)
 
 When the solution uses a common language-level API that developers frequently look up 
 (JavaScript/TypeScript array, string, or object methods; PHP PDO or common query patterns), 
-you MAY add a short Syntax Anchor **after** the main code block the human must type.
+you MAY add a short Syntax Anchor **after** the code you applied.
 
 ### Strict conditions (all must be true)
 - The API belongs to the core language or very common standard library (not framework-specific)
@@ -632,7 +471,7 @@ you MAY add a short Syntax Anchor **after** the main code block the human must t
 - The current language is JavaScript, TypeScript, or PHP
 
 ### Format (mandatory)
-- Place the anchor **after** the code the human must type
+- Place the anchor **after** the code you applied
 - Label it exactly as one of:
   - `Syntax (JS):`
   - `Syntax (TS):`
@@ -656,7 +495,7 @@ you MAY add a short Syntax Anchor **after** the main code block the human must t
 4. **Implement the minimal correct solution** (edit files directly)
 5. Confirm green from tool output, auto-fix up to 3x
 6. Optional one-sentence Ponytail cleanup
-7. Chain to guided-refactoring → guided-review → guided-verify
+7. Recommend guided-refactoring, then guided-review, then guided-verify. Stop.
 8. Stop
 
 ## Automation notes (default)
@@ -674,7 +513,7 @@ you MAY add a short Syntax Anchor **after** the main code block the human must t
 - Continuing past a green test without explicit user request.
 - Long explanatory paragraphs.
 - Dumping long lists of rules or best practices unprompted.
-- Asking the human to type or run checks the AI can do itself (outside Manual Mode).
+- Asking the human to type or run checks the AI can do itself.
 
 ## Example automation style
 

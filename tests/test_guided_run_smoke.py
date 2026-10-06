@@ -62,6 +62,155 @@ class ValidatePlanTest(unittest.TestCase):
             self.assertIn("missing required key: goal", r.stdout)
 
 
+def minimal_plan(**overrides):
+    plan = {
+        "goal": "Cancel a pending order and release reserved stock.",
+        "blast_radius": {"files": ["src/orders/cancel.ts"]},
+        "steps": [{"file": "src/orders/cancel.ts", "action": "Add guard"}],
+        "test_strategy": {"tests": ["cancel.test.ts"]},
+        "done_criteria": ["Tests green"],
+        "source_of_standards": "project convention",
+    }
+    plan.update(overrides)
+    return plan
+
+
+def run_plan(tmp, name, plan):
+    path = Path(tmp) / name
+    path.write_text(json.dumps(plan), encoding="utf-8")
+    return run_guided("validate-plan", path)
+
+
+class NonFunctionalRequirementsTest(unittest.TestCase):
+    def test_nfr_block_is_optional(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "plain.json", minimal_plan())
+            self.assertEqual(r.returncode, 0, msg=r.stdout + r.stderr)
+            self.assertIn("PLAN IR: PASS", r.stdout)
+            self.assertNotIn("nfr missing", r.stdout)
+
+    def test_well_formed_nfr_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "nfr.json", minimal_plan(nfr={
+                "growth_horizon": "200 -> 20k orders/day in 12 months",
+                "latency": "p95 < 300ms",
+                "assumptions": ["No platform team"],
+            }))
+            self.assertEqual(r.returncode, 0, msg=r.stdout + r.stderr)
+            self.assertIn("PLAN IR: PASS", r.stdout)
+            self.assertNotIn("nfr missing", r.stdout)
+
+    def test_malformed_nfr_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "bad-nfr.json", minimal_plan(nfr={
+                "latency": 300,
+                "assumptions": "no platform team",
+            }))
+            self.assertEqual(r.returncode, 1, msg=r.stdout + r.stderr)
+            self.assertIn("nfr.latency must be a string", r.stdout)
+            self.assertIn("nfr.assumptions must be a string array", r.stdout)
+
+    def test_large_change_without_nfr_warns_but_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plan = minimal_plan()
+            plan["blast_radius"] = {
+                "files": ["a.ts", "b.ts", "c.ts", "d.ts"],
+                "justification": "Splitting the service",
+            }
+            plan["steps"] = [
+                {"file": f, "action": "Refactor"} for f in
+                ("a.ts", "b.ts", "c.ts", "d.ts")
+            ]
+            r = run_plan(tmp, "large.json", plan)
+            self.assertEqual(r.returncode, 0, msg=r.stdout + r.stderr)
+            self.assertIn("PLAN IR: PASS", r.stdout)
+            self.assertIn("nfr missing on a large change", r.stdout)
+
+    def test_key_decision_without_why_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "kd.json", minimal_plan(
+                key_decisions=[{"decision": "Use the outbox"}],
+            ))
+            self.assertEqual(r.returncode, 1, msg=r.stdout + r.stderr)
+            self.assertIn(
+                "each key_decision needs decision + why", r.stdout
+            )
+
+    def test_key_decision_exit_cost_must_be_a_string(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "kd2.json", minimal_plan(
+                key_decisions=[{
+                    "decision": "Use the outbox",
+                    "why": "Prevents dual writes",
+                    "exit_cost": 3,
+                }],
+            ))
+            self.assertEqual(r.returncode, 1, msg=r.stdout + r.stderr)
+            self.assertIn(
+                "key_decision.exit_cost must be a string", r.stdout
+            )
+
+    def test_key_decisions_must_be_an_array_of_strings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "kd3.json", minimal_plan(key_decisions=0))
+            self.assertEqual(r.returncode, 1, msg=r.stdout + r.stderr)
+            self.assertIn("key_decisions must be an array", r.stdout)
+            r = run_plan(tmp, "kd4.json", minimal_plan(
+                key_decisions=[{"decision": ["a"], "why": 1}]))
+            self.assertEqual(r.returncode, 1, msg=r.stdout + r.stderr)
+            self.assertIn(
+                "each key_decision needs decision + why as non-empty strings",
+                r.stdout,
+            )
+
+    def test_empty_nfr_does_not_suppress_the_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plan = minimal_plan()
+            plan["blast_radius"] = {
+                "files": ["a.ts", "b.ts", "c.ts", "d.ts"],
+                "justification": "Splitting the service",
+            }
+            plan["steps"] = [
+                {"file": f, "action": "Refactor"} for f in
+                ("a.ts", "b.ts", "c.ts", "d.ts")
+            ]
+            r = run_plan(tmp, "empty-nfr.json", dict(plan, nfr={}))
+            self.assertEqual(r.returncode, 0, msg=r.stdout + r.stderr)
+            self.assertIn("PLAN IR: PASS", r.stdout)
+            self.assertIn("nfr missing on a large change", r.stdout)
+
+    def test_unknown_nfr_key_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_plan(tmp, "typo.json", minimal_plan(nfr={
+                "scalabilty": "20k/day",
+            }))
+            self.assertEqual(r.returncode, 1, msg=r.stdout + r.stderr)
+            self.assertIn("unknown nfr key: scalabilty", r.stdout)
+
+    def test_optional_blocks_must_be_arrays(self):
+        """A falsy non-array used to slip through `or []` unvalidated."""
+        for field in ("invariants", "events", "key_decisions"):
+            for value in (0, False, ""):
+                with self.subTest(field=field, value=value):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        r = run_plan(tmp, "arr.json",
+                                     minimal_plan(**{field: value}))
+                        self.assertEqual(
+                            r.returncode, 1, msg=r.stdout + r.stderr)
+                        self.assertIn(
+                            "%s must be an array" % field, r.stdout)
+
+    def test_optional_blocks_accept_null(self):
+        for field in ("invariants", "events", "key_decisions", "nfr"):
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as tmp:
+                    r = run_plan(tmp, "null.json",
+                                 minimal_plan(**{field: None}))
+                    self.assertEqual(
+                        r.returncode, 0, msg=r.stdout + r.stderr)
+                    self.assertIn("PLAN IR: PASS", r.stdout)
+
+
 class McpTest(unittest.TestCase):
     def test_snippets_are_valid_json_for_all_platforms(self):
         for platform, top_key in (("opencode", "mcp"),

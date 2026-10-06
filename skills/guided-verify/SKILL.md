@@ -18,7 +18,7 @@ This is the final gate of the guided family.
 
 ## Project Memory (self-regenerative)
 
-Load `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` first, plus `docs/repo-map.json` when present. Prefer its `test_commands` over guessing. Use known test commands, scripts, and conventions. Update memory only when a new high-value verification fact appears (e.g. the real way this project runs e2e). Prefer writing into `AGENTS.md` when running in OpenCode.
+Load `docs/guided-memory.md` and `docs/repo-map.json` when present. Prefer recorded test commands over guessing. Update `docs/guided-memory.md` only when a new high-value verification fact appears (for example the real way this project runs e2e). If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 ## Semantic retrieval (capability-aware)
 
@@ -52,11 +52,11 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 | **Plan** | Safe for listing and interpreting verification results (read-only). |
 | **Build** | Use when fixes are needed; AI applies them and re-runs. |
 
-Show exact commands the human should run in the terminal. Update known test/verification commands into `AGENTS.md` or project memory so future sessions stay accurate.
+Run the checks. Record new verification commands in `docs/guided-memory.md` so future sessions stay accurate.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-verify` or `@guided-verify`. Prefer updating `AGENTS.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-verify` or `@guided-verify`. Record facts in `docs/guided-memory.md`.
 
 ## Core Rules
 

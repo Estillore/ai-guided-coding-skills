@@ -55,7 +55,7 @@
         "rename_symbol": false,
         "search_web": true,
         "skill": true,
-        "spawn_agent": true,
+        "spawn_agent": false,
         "terminal": false,
         "write_file": false
       }

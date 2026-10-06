@@ -41,10 +41,10 @@ Harness as the Heart: when reviewing agent, plugin, multi-step tool, or large-co
 
 Before reviewing, check for project memory:
 
-- Preferred: `.grok/project-memory.md` or `.kiro/project-memory.md` or `AGENTS.md` (OpenCode)
-- Fallbacks: `CLAUDE.md`, `docs/project-notes/`
+- Read `docs/guided-memory.md` when it exists, plus `docs/repo-map.json`.
+- Fallbacks for reading only: `CLAUDE.md`, `docs/project-notes/`.
 
-Load it first, plus `docs/repo-map.json` when present. Respect the project's own conventions and known decisions. Update the memory only when the review surfaces a new high-value gotcha or convention (prefer `AGENTS.md` inside OpenCode).
+Respect the project's own conventions. Update `docs/guided-memory.md` only when the review surfaces a new high-value gotcha. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 ## Semantic retrieval (capability-aware)
 
@@ -73,20 +73,15 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 
 **Pairing with OpenCode agents**
 
-| OpenCode agent | How to use this skill |
-|----------------|-----------------------|
-| **Plan** | Ideal for pure review (read-only by default). |
-| **Build** | Use after changes; AI auto-fixes CRITICAL/HIGH and reports the rest. |
-
-Update memory into `AGENTS.md` or `.grok/project-memory.md`.
+The `guided-review` primary applies fixes. The `guided-reviewer` subagent is read-only and does not edit. Auto-fix CRITICAL and HIGH only when the active host can edit. Record facts in `docs/guided-memory.md`.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-review` or `@guided-review`. Prefer updating `AGENTS.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-review` or `@guided-review` on the Write profile. Auto-fix CRITICAL and HIGH only when the active host can edit. Record facts in `docs/guided-memory.md`.
 
 ## Core Rules
 
-1. **AI reviews + auto-fixes CRITICAL/HIGH. This rule is absolute.**
+1. **Auto-fix CRITICAL and HIGH only when the active host can edit.**
    - Edit the codebase directly for must-fix findings.
    - MEDIUM/LOW: fix if trivial (≤3 lines), otherwise list as follow-ups.
    - Report each applied fix with exact file:line + one-sentence why.
@@ -226,8 +221,8 @@ When the diff touches infra files (Dockerfile, compose, wrangler config, deploy/
    Track open must-fix findings: keep fixing while the count reaches a new minimum (max 3 rounds). If two consecutive rounds do not reduce it, stop and report the remainder truthfully with file:line + risk.
 
 6. **Close**
-   Confirm remaining risk (if any) with evidence and chain to `guided-verify`.
-   If no important issues: say so in one sentence and chain to verify.
+   Confirm remaining risk (if any) with evidence and recommend `guided-verify` and stop.
+   If no important issues: say so in one sentence, recommend `guided-verify` and stop.
 
 ## Common false positives — never report these
 

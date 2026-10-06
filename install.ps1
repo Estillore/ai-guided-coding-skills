@@ -63,6 +63,8 @@ function Install-OpenCode {
     if (Test-Path $srcAgents) {
         New-Item -ItemType Directory -Force -Path $destAgents | Out-Null
         Copy-Item -Path (Join-Path $srcAgents "*.md") -Destination $destAgents -Force
+        $retired = Join-Path $destAgents "guided-tdd.md"
+        if (Test-Path $retired) { Remove-Item -Force $retired }
     }
     Write-Host "OK  OpenCode -> $dest"
     Write-Host "    agents   -> $destAgents\guided-*.md"

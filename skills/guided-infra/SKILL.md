@@ -53,11 +53,11 @@ Works in every Kiro environment. Install to `~/.kiro/skills/` or `.kiro/skills/`
 
 ## OpenCode support
 
-Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also under `.claude/skills/`. Update memory into `AGENTS.md`.
+Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also under `.claude/skills/`. Update `docs/guided-memory.md`.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-infra` or `@guided-infra`. Prefer updating `AGENTS.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-infra` or `@guided-infra`. Record facts in `docs/guided-memory.md`.
 
 ## Core Rules
 

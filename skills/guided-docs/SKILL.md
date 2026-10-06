@@ -30,7 +30,7 @@ When learning existing project code (not just a library):
 
 - First check `.grok/project-memory.md` or `.kiro/project-memory.md` (or `AGENTS.md` / `CLAUDE.md` / `docs/project-notes/`).
 - If present, load it and use it as the starting point for the mental model.
-- After extracting new high-value facts about architecture, conventions, or gotchas, update the memory file (prefer `.kiro/project-memory.md` when inside Kiro, or append/update a Project Memory section in `AGENTS.md` when running in OpenCode) so future sessions (and the other guided skills) start smarter.
+- After extracting new high-value facts about architecture, conventions, or gotchas, update `docs/guided-memory.md` so later sessions start smarter. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 This is the same lightweight memory protocol used by all guided skills.
 
@@ -93,13 +93,13 @@ This skill is the natural starting point for learning in Kiro.
 
 Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project). Also compatible with `~/.claude/skills/` and `.claude/skills/`.
 
-OpenCode agents load the skill on demand when the task matches the description. Prefer the **Plan** agent for pure learning/docs work (read-only). Update project knowledge into `AGENTS.md` (created by `/init`) or `.grok/project-memory.md`.
+OpenCode loads this skill on demand. It is read-only understanding work. Update `docs/guided-memory.md`. Recommend `guided-plan` when a change needs a plan, then stop.
 
 This skill is the natural starting point for learning in OpenCode as well.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-docs` or `@guided-docs`, or ask the agent to use the skill. Prefer updating `AGENTS.md` for project memory.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-docs` or `@guided-docs`, or ask the agent to use the skill. Record facts in `docs/guided-memory.md`.
 
 ## Modes
 

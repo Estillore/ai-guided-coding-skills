@@ -54,7 +54,7 @@ Before Adaptability or diagnosis, check for project memory:
 **If present** → load it first and treat it as known ground truth.
 
 **Self-regeneration**  
-After diagnosis or successful refactor steps that reveal new architecture facts, conventions, or gotchas, update the memory file (prefer `.kiro/project-memory.md` when inside Kiro, or a Project Memory section in `AGENTS.md` when inside OpenCode). Keep entries short and high-value only. This makes the skill smarter on the same project over time.
+After diagnosis or successful refactor steps that reveal new architecture facts, conventions, or gotchas, update `docs/guided-memory.md`. Keep entries short and high-value only. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
 
 ### Memory file format (keep it tiny)
 
@@ -109,11 +109,11 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 | **Plan** | Safe for diagnosis and planning the cleanup sequence (read-only). |
 | **Build** | Use for the actual cleanup steps. AI applies each step directly, runs checks, and auto-fixes. |
 
-Update project memory into `AGENTS.md` or `.grok/project-memory.md` so the cleaned conventions stick for later sessions and other guided skills.
+Update `docs/guided-memory.md` so the cleaned conventions stick for later sessions.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-refactoring` or `@guided-refactoring`. Automation contract (AI applies the cleaned version directly). Prefer updating `AGENTS.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-refactoring` or `@guided-refactoring`. Automation contract (AI applies the cleaned version directly). Record facts in `docs/guided-memory.md`.
 
 ## Documentation is Truth (highest priority for the target shape)
 

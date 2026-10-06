@@ -28,9 +28,18 @@
   "key_decisions": [
     {
       "decision": "Repository owns the transaction, use-case stays pure",
-      "why": "Matches existing order service style"
+      "why": "Matches existing order service style",
+      "exit_cost": "Low. The transaction can move to a use-case port without touching callers."
     }
   ],
+  "nfr": {
+    "growth_horizon": "Orders 200/day -> 20k/day in 12 months; 2 backend devs",
+    "latency": "p95 < 300ms on POST /orders/:id/cancel",
+    "assumptions": [
+      "No dedicated platform team; the team owns deployment",
+      "Read traffic stays far above write traffic, so no cache tier is justified yet"
+    ]
+  },
   "test_strategy": {
     "tests": ["cancelOrder.test.ts"],
     "coverage_min": 80

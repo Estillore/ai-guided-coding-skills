@@ -23,7 +23,7 @@ import sys
 REQUIRED = ["goal", "blast_radius", "steps", "test_strategy",
             "done_criteria", "source_of_standards"]
 ALLOWED_TOP = set(REQUIRED) | {"non_goals", "key_decisions", "invariants",
-                               "events", "accuracy"}
+                               "events", "accuracy", "nfr"}
 DEFAULT_BLAST_RADIUS = 3
 MAX_STEPS_PER_SLICE = 7
 
@@ -110,12 +110,41 @@ def main():
     if not isinstance(dc, list) or not dc:
         err(errors, "done_criteria must be a non-empty array")
 
-    for inv in plan.get("invariants", []) or []:
+    kds = plan.get("key_decisions", [])
+    if kds is None:
+        kds = []
+    if not isinstance(kds, list):
+        err(errors, "key_decisions must be an array")
+        kds = []
+    for kd in kds:
+        if not isinstance(kd, dict):
+            err(errors, "each key_decision must be an object")
+            continue
+        for k in ("decision", "why"):
+            if not isinstance(kd.get(k), str) or not kd.get(k):
+                err(errors, "each key_decision needs decision + why "
+                            "as non-empty strings")
+        if "exit_cost" in kd and not isinstance(kd["exit_cost"], str):
+            err(errors, "key_decision.exit_cost must be a string")
+
+    invs = plan.get("invariants", [])
+    if invs is None:
+        invs = []
+    if not isinstance(invs, list):
+        err(errors, "invariants must be an array")
+        invs = []
+    for inv in invs:
         if not isinstance(inv, dict) or not inv.get("rule") \
                 or not inv.get("enforcement"):
             err(errors, "each invariant needs rule + enforcement")
 
-    for ev in plan.get("events", []) or []:
+    evs = plan.get("events", [])
+    if evs is None:
+        evs = []
+    if not isinstance(evs, list):
+        err(errors, "events must be an array")
+        evs = []
+    for ev in evs:
         if not isinstance(ev, dict) or not ev.get("name") \
                 or not isinstance(ev.get("outbox"), bool):
             err(errors, "each event needs name + outbox bool")
@@ -135,6 +164,33 @@ def main():
                 if not isinstance(v, list) or not all(
                         isinstance(x, str) and x for x in v):
                     err(errors, f"accuracy.{k} must be a string array")
+
+    nfr_fields = ("growth_horizon", "scalability", "latency",
+                  "availability", "cost_ceiling", "security")
+    nfr = plan.get("nfr", None)
+    nfr_stated = False
+    if nfr is not None:
+        if not isinstance(nfr, dict):
+            err(errors, "nfr must be an object")
+        else:
+            for key in nfr:
+                if key not in nfr_fields + ("assumptions",):
+                    err(errors, f"unknown nfr key: {key} "
+                                "(no extra keys)")
+            for k in nfr_fields:
+                v = nfr.get(k, None)
+                if v is not None and not isinstance(v, str):
+                    err(errors, f"nfr.{k} must be a string")
+                if v:
+                    nfr_stated = True
+            assumptions = nfr.get("assumptions", [])
+            if not isinstance(assumptions, list) or not all(
+                    isinstance(x, str) and x for x in assumptions):
+                err(errors, "nfr.assumptions must be a string array")
+            nfr_stated = nfr_stated or bool(assumptions)
+    if not nfr_stated and len(files) > DEFAULT_BLAST_RADIUS:
+        warnings.append("nfr missing on a large change: scalability, "
+                        "latency, and cost targets unstated")
 
     for c in changed:
         if not in_radius(c, files):
