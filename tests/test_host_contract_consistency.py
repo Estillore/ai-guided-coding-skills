@@ -184,6 +184,14 @@ class HostContractConsistencyTest(unittest.TestCase):
         self.assertNotIn("chain to `guided-verify`", review)
         self.assertNotIn("| **Build** |", review)
 
+    def test_refactoring_names_review_and_stops(self):
+        text = read("skills/guided-refactoring/SKILL.md")
+        self.assertIn("when the human invokes it", text)
+        self.assertIn("name `guided-review` and stop", text)
+        self.assertIn("refactor: clean, skipped", text)
+        self.assertNotIn("always runs", text)
+        self.assertNotIn("chain forward", text)
+        self.assertNotIn("chain to review", text)
 
     def test_quality_reference_does_not_coach_typing(self):
         text = read("skills/guided-coding/references/quality-rules.md")

@@ -55,7 +55,7 @@ This skill is the structural cleanup step of the guided family. Actively recomme
 ```
 guided-docs → guided-plan → guided-coding → guided-refactoring → guided-review → guided-verify
 ```
-`guided-refactoring` always runs after coding in autonomous runs: clean structure, remove duplication, re-apply Ponytail — then chain to review. Auto-skip rule: if no smells, no Ponytail violations, and no convention drift are found, log `refactor: clean, skipped` and chain forward immediately (no empty edits).
+`guided-refactoring` runs when the human invokes it after coding: clean structure, remove duplication, re-apply Ponytail, then name `guided-review` and stop. Auto-skip rule: if no smells, no Ponytail violations, and no convention drift are found, log `refactor: clean, skipped` and make no empty edits. Do not auto-chain.
 
 **Typical cleaning path**
 ```
