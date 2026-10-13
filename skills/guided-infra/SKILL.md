@@ -1,6 +1,7 @@
 ---
 name: guided-infra
-description: Infrastructure and growth roadmap only. Use when the change touches containers, edge, data stores, or a growth signal already crossed. Emits Now/Next/Later and stops. Not a default loop step. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Infrastructure and growth roadmap only. Use when the change touches containers, edge, data stores, or a growth signal already crossed. Emits Now/Next/Later and stops. Not a default loop step. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Infra
 
@@ -47,7 +48,7 @@ guided-review → guided-verify ── growth watch ──→ guided-infra (road
 
 ## Project Memory (self-regenerative)
 
-Load project memory first (`AGENTS.md`, `.grok/project-memory.md`, `.kiro/project-memory.md`, `CLAUDE.md`), plus `docs/repo-map.json` when present. The repo-map's `infrastructure` block is the last known infra snapshot and `growth.last_audit` / `growth.recommended` drive the automatic-trigger cooldown. The harness `growth` command refreshes both when run. After an audit, record only what matters: accepted roadmap items, deferred decisions, and the next re-check trigger.
+Load project memory first (`AGENTS.md`, `.grok/project-memory.md`, `.kiro/project-memory.md`, `CLAUDE.md`), plus `docs/repo-map.json` when present. The repo-map's `infrastructure` block is the last known infra snapshot and `growth.last_audit` / `growth.recommended` drive the automatic-trigger cooldown. The harness `growth` command refreshes both when run. After an audit, record only what matters: accepted roadmap items, deferred decisions, and the next re-check trigger. Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`.
 
 ## Kiro IDE support
 
@@ -63,11 +64,11 @@ Works in every Kiro environment. Install to `~/.kiro/skills/` or `.kiro/skills/`
 
 ## OpenCode support
 
-Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also under `.claude/skills/`. Update `docs/guided-memory.md`.
+Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project); also under `.claude/skills/`. Follow the memory contract in Project Memory.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-infra` or `@guided-infra`. Record facts in `docs/guided-memory.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-infra` or `@guided-infra`. Follow the memory contract in Project Memory.
 
 ## Core Rules
 

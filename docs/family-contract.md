@@ -18,6 +18,10 @@ Load one skill. If two could match, use this order and stop:
 
 `agents/guided-planner.json` and `agents/guided-reviewer.json` are agents, not skills.
 
+## Design packs
+
+Optional design packs install in the app repo, are not family members, and the Design lane classifies each surface as existing, web app, or website.
+
 ## Stop
 
 Do not auto-chain. Recommend the next skill in one line, then stop.

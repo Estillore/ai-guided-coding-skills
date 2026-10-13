@@ -1,6 +1,7 @@
 ---
 name: guided-verify
-description: Close the loop with evidence. Use for verify, run the checks, are we done, or confirm this works. Runs the planned checks, auto-fixes up to 3 loops, reprints blast-radius drift. Design review belongs to guided-review. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Close the loop with evidence. Use for verify, run the checks, are we done, or confirm this works. Runs the planned checks, auto-fixes up to 3 loops, reprints blast-radius drift. Design review belongs to guided-review. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Verify
 
@@ -28,7 +29,7 @@ Follow `docs/family-contract.md`. This skill is done only when all of these hold
 
 ## Project Memory (self-regenerative)
 
-Load `docs/guided-memory.md` and `docs/repo-map.json` when present. Prefer recorded test commands over guessing. Update `docs/guided-memory.md` only when a new high-value verification fact appears (for example the real way this project runs e2e). If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+Load `docs/guided-memory.md` and `docs/repo-map.json` when present. Prefer recorded test commands over guessing. Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`. Do not append a project-memory section to `AGENTS.md`.
 
 ## Semantic retrieval (capability-aware)
 
@@ -62,11 +63,11 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 | **Plan** | Safe for listing and interpreting verification results (read-only). |
 | **Build** | Use when fixes are needed; AI applies them and re-runs. |
 
-Run the checks. Record new verification commands in `docs/guided-memory.md` so future sessions stay accurate.
+Run the checks. Record new verification commands with the memory contract above so future sessions stay accurate.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-verify` or `@guided-verify`. Record facts in `docs/guided-memory.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-verify` or `@guided-verify`. Follow the memory contract in Project Memory.
 
 ## Core Rules
 

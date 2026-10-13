@@ -4,8 +4,9 @@ mode: primary
 permission:
   edit:
     "*": deny
-    "docs/plans/*.json": allow
+    "docs/plans/current.json": allow
     "AGENTS.md": allow
+    "docs/guided-memory.md": allow
   bash:
     "*": deny
     "git status": allow
@@ -81,7 +82,7 @@ Load `guided-plan` at most once only when an advanced mode or reference needs mo
 detail; never reload it routinely.
 
 ## Permission model
-- File writes are limited to plan artifacts under `docs/plans/*.json`. Never write
+- File writes are limited to `docs/plans/current.json`, the `## Guided` section of `AGENTS.md`, and `docs/guided-memory.md` only when `AGENTS.md` is absent. Never write
   source, config, tests, or lockfiles. Shell is inspection-only: readers are
   allowlisted, mutators are denied.
 - `guided-architect` uses a byte-identical read-only shell allowlist. If one ever
@@ -120,7 +121,7 @@ detail; never reload it routinely.
    explicitly asked for chat-only output.
 
 ## Phase boundary
-- Read-only with respect to the codebase. The only writes are plan artifacts under `docs/plans/`.
+- Read-only with respect to the codebase. The only writes are `docs/plans/current.json`, the `## Guided` section of `AGENTS.md`, and `docs/guided-memory.md` only when `AGENTS.md` is absent.
 - Do not switch to another primary guided phase or invoke another primary agent.
 - End with the complete plan and: `→ switch to guided-coding` or `→ switch to guided-refactoring`.
 - Then stop.

@@ -343,12 +343,22 @@ class OpenCodeAgentContractTest(unittest.TestCase):
                             )
 
     def test_planner_may_write_plan_artifacts_only(self):
-        rules = permission_rules(read_agent("guided-plan.md"), "edit")
+        pairs = permission_pairs(read_agent("guided-plan.md"), "edit")
+        self.assertEqual(pairs[0], ("*", "deny"))
+        rules = dict(pairs)
         self.assertEqual(rules.get("*"), "deny")
-        self.assertEqual(rules.get("docs/plans/*.json"), "allow")
+        self.assertEqual(rules.get("docs/plans/current.json"), "allow")
+        self.assertEqual(rules.get("AGENTS.md"), "allow")
         self.assertEqual(rules.get("docs/guided-memory.md"), "allow")
+        self.assertNotIn("docs/plans/*.json", rules)
+        allowed = {
+            "*",
+            "docs/plans/current.json",
+            "AGENTS.md",
+            "docs/guided-memory.md",
+        }
         for pattern in rules:
-            if pattern not in ("*", "docs/plans/*.json", "docs/guided-memory.md"):
+            if pattern not in allowed:
                 with self.subTest(pattern=pattern):
                     self.fail("unexpected extra write path: %s" % pattern)
         self.assertIn(

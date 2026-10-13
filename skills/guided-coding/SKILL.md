@@ -1,6 +1,7 @@
 ---
 name: guided-coding
-description: Ship the change. On a vanilla PHP tree, trace php.call before any file read. Use for implement this feature, fix this bug, or end-to-end. Edits code, runs tests, auto-fixes up to 3 loops, stays inside blast radius. Explicit test-first belongs to guided-tdd. Teaching belongs to guided-buddy. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Ship the change. On a vanilla PHP tree, trace php.call before any file read. Use for implement this feature, fix this bug, or end-to-end. Edits code, runs tests, auto-fixes up to 3 loops, stays inside blast radius. Explicit test-first belongs to guided-tdd. Teaching belongs to guided-buddy. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Coding
 
@@ -83,10 +84,10 @@ Recommend `guided-refactoring` after coding, then stop. Do not auto-chain. Harne
 
 ## Project Memory (self-regenerative)
 
-If `AGENTS.md` exists, update its `## Guided` section and do not create `docs/guided-memory.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent.
+Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`.
 
 **Self-regeneration rule**  
-After any meaningful discovery (new entry points, layer rules, dependency direction, important convention, or gotcha), update `docs/guided-memory.md`. Keep entries short. High-value facts (framework + version, structure style, source of standards) can be written without confirmation.
+After any meaningful discovery (new entry points, layer rules, dependency direction, important convention, or gotcha), follow the memory contract above. Keep entries short. High-value facts (framework + version, structure style, source of standards) can be written without confirmation.
 
 ### Memory file format (keep it tiny)
 
@@ -139,7 +140,7 @@ Kiro discovers them automatically. Type `/` in chat to invoke them as slash comm
 **Maximize quality**
 - Start with `/guided-docs` to lock the mental model.
 - Then `/guided-coding` for implementation. Recommend `/guided-refactoring` after it and stop.
-- Let the skills keep updating `docs/guided-memory.md` so later sessions and parallel agents start smarter.
+- Follow the memory contract above so later sessions and parallel agents start smarter.
 - Prefer one tiny automated step at a time — this pairs extremely well with Kiro's sequenced task lists.
 
 ## OpenCode support
@@ -154,7 +155,7 @@ OpenCode discovers them automatically. Agents see available skills and load them
 
 **Pairing with OpenCode primary agents**
 
-Use `guided-coding` for implementation. Use `guided-plan` before a non-trivial change, `guided-review` after it, and `guided-verify` for the evidence pass. Ask `guided-test-design` for the RED case, then write the test and run it in this primary. Each phase stops. The human switches agents. Record facts in the `## Guided` section of `AGENTS.md`. Fall back to `docs/guided-memory.md` only when `AGENTS.md` is absent.
+Use `guided-coding` for implementation. Use `guided-plan` before a non-trivial change, `guided-review` after it, and `guided-verify` for the evidence pass. Ask `guided-test-design` for the RED case, then write the test and run it in this primary. Each phase stops. The human switches agents. Follow the memory contract in Project Memory.
 
 ## Zed support
 
@@ -169,7 +170,7 @@ Zed discovers them automatically. The agent sees the skill catalog (name + descr
 **How to use**
 - Invoke with `/guided-coding` or `@guided-coding` (or ask “use the guided-coding skill”).
 - Automation contract: AI applies the complete minimal solution directly and reports evidence.
-- Project memory: `docs/guided-memory.md`. Invoke `/guided-coding` on Zed's Write profile. There is no Guided Coding profile.
+- Follow the memory contract in Project Memory. Invoke `/guided-coding` on Zed's Write profile. There is no Guided Coding profile.
 - Agent profiles: a profile is a tool set plus a default model and carries **no prompt**, so it cannot hold the guided contract on its own. Pair the read-only `Guided Plan` / `Guided Buddy` profiles (`agents/zed/profiles.snippet.jsonc`) with the matching slash command.
 
 **Note**  
@@ -433,6 +434,19 @@ Examples of stacks this mode supports:
 - Reuse the vendored files. No CDN if the project already vendors Bootstrap or forbids a CDN.
 - Prefer existing components and `data-bs-*` over custom CSS. One bundle. Do not double-init.
 - Do not add Bootstrap to a print or receipt view the project keeps Bootstrap-free.
+
+**Design lane**
+
+Classify the surface of this change, then load one design skill for this pass. A missing skill leaves the preset in place. The official docs of the UI library still decide the API. `impeccable` polish is its own later pass, after the UI works.
+
+- An existing design pattern on the touched UI wins over both presets. Shared components, tokens, or a repeated layout: copy that spacing, type, color, radius, and motion.
+- Web app when the human says app, dashboard, admin, portal, or tool, or the screen is a task shell (nav plus a table, form, settings, list, or detail). Keep it minimal and readable. One accent. Body text at least 16px. Motion only for hover, focus, open, close, and feedback. `prefers-reduced-motion` shows the content in place.
+- A web app does not gain scroll-pinned scenes or a new GSAP dependency. Load `ui-ux-pro-max` with a dashboard or app product type. Load `design-taste-frontend` at DESIGN_VARIANCE 3, MOTION_INTENSITY 2, VISUAL_DENSITY 5 only when the human asks for that skill instead.
+- Website when the human says site, landing, marketing, homepage, campaign, or portfolio, or the screen is a hero and sections down a scroll. Use open sections, entrance fades (opacity plus a short rise), and scroll reveals. `prefers-reduced-motion` shows the content in place.
+- For a website, load one skill for this pass: `ui-ux-pro-max` with a landing product type, or `design-taste-frontend` at DESIGN_VARIANCE 7, MOTION_INTENSITY 7, VISUAL_DENSITY 3 when the human asks for a distinct page, or `emil-design-eng` when the task is the motion. Use `gsap-core` only when the project already depends on GSAP or the human asks for GSAP, and it is the one skill for this pass.
+- A repo that contains both uses the files being edited.
+- `website-to-hyperframes` runs only when the human asks for a video of the page, and it is the one skill for this pass.
+- When the app repo has `AGENTS.md`, replace its `## Guided` section in place, keep the lines already there, and include `ui.surface: existing | webapp | website`.
 
 The same Strong TDD / show-complete-solution workflow is used; the solutions simply follow the real frontend stack of the project.
 

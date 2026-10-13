@@ -1,0 +1,140 @@
+{
+  "goal": "Install the verified design-lane tree on this machine for OpenCode and Zed, then commit that tree and push it to origin/main.",
+  "non_goals": [
+    "Editing skill prose, tests, or the family contract",
+    "Installing Kiro or Grok",
+    "Running npx skills add for the six design packs",
+    "Copying those packs into skills/",
+    "Creating docs/guided-memory.md or a slug plan file",
+    "Adding OpenCode agents for docs or infra",
+    "Force-pushing or opening a pull request"
+  ],
+  "blast_radius": {
+    "files": [
+      "README.md",
+      "AGENTS.md",
+      "agents/opencode/guided-plan.md",
+      "docs/family-contract.md",
+      "docs/plans/current.json",
+      "skills/guided-buddy/SKILL.md",
+      "skills/guided-coding/SKILL.md",
+      "skills/guided-docs/SKILL.md",
+      "skills/guided-infra/SKILL.md",
+      "skills/guided-plan/SKILL.md",
+      "skills/guided-refactoring/SKILL.md",
+      "skills/guided-review/SKILL.md",
+      "skills/guided-tdd/SKILL.md",
+      "skills/guided-verify/SKILL.md",
+      "tests/test_host_contract_consistency.py",
+      "tests/test_opencode_agent_contracts.py"
+    ],
+    "justification": "The design lane and the memory-contract edits are already in the working tree and were verified. This slice ships that tree and copies skills/ to two hosts. No file outside this list is part of the commit."
+  },
+  "steps": [
+    {
+      "file": "skills/guided-coding/SKILL.md",
+      "action": "Run install.ps1 -Target opencode, then install.ps1 -Target zed. Do not pass all, kiro, grok, or both. Confirm both host copies contain the sentence load one design skill for this pass. install.ps1 exits 1 because sync --check still reports Kiro and Grok. Leave those two hosts untouched.",
+      "why": "The user wants this machine updated, and the recorded preference is OpenCode and Zed only. OpenCode's skill root is an ECC junction, so the installer copy is the allowed write and npx skills add is not."
+    },
+    {
+      "file": "agents/opencode/guided-plan.md",
+      "action": "Let the OpenCode install copy agents/opencode/*.md and remove a retired guided-tdd.md if that file is present. Do not change the edit allowlist: * deny first, then docs/plans/current.json, AGENTS.md, and docs/guided-memory.md.",
+      "why": "The allowlist test requires the deny-first rule. The agent file is already updated in the tree."
+    },
+    {
+      "file": "tests/test_host_contract_consistency.py",
+      "action": "Re-run python -m unittest discover -s tests -v before the commit. Do not edit the test.",
+      "why": "The suite is the recorded check. A green run after the plan-memory edit is the evidence that the commit is the verified tree."
+    },
+    {
+      "file": "AGENTS.md",
+      "action": "Leave the ## Guided section as written. Do not create docs/guided-memory.md and do not add a pointer to it.",
+      "why": "This repo stores memory in that section. The ship decision is already there."
+    },
+    {
+      "file": "docs/family-contract.md",
+      "action": "Ship the file unchanged. The design-packs sentence stays the rule that those packs are not family members.",
+      "why": "The host-contract test locks that sentence."
+    },
+    {
+      "file": "docs/plans/current.json",
+      "action": "Commit this file with the tree. Do not write docs/plans/<slug>.json.",
+      "why": "The only plan file this repo keeps is current.json."
+    },
+    {
+      "file": "README.md",
+      "action": "Stage every blast-radius file, including the other skill files and tests/test_opencode_agent_contracts.py, with no further prose edits. One commit on main. Subject: Add the frontend design lane and lock the memory contract. Push to origin main with no force.",
+      "why": "The human asked for the commit and the GitHub push. main tracks origin/main. The repo's commit subjects are imperative sentences."
+    }
+  ],
+  "key_decisions": [
+    {
+      "decision": "It means the verified uncommitted tree: the design lane plus the memory-contract edits. It does not mean installing ui-ux-pro-max, design-taste-frontend, impeccable, emil-design-eng, gsap-core, or website-to-hyperframes.",
+      "why": "Those six packs stay out of skills/ and out of the OpenCode ECC junction. They install later in a frontend app repo.",
+      "exit_cost": "Low. A later slice can install them in a named frontend repo."
+    },
+    {
+      "decision": "Copy skills to OpenCode and Zed only. Accept install.ps1 exit 1 when sync --check names only Kiro and Grok.",
+      "why": "That is the recorded host preference. Clearing the exit by installing all four hosts would update Kiro and Grok.",
+      "exit_cost": "Low. -Target all remains available."
+    },
+    {
+      "decision": "One commit on main, then git push origin main. No force push and no pull request.",
+      "why": "The branch is main and it tracks origin/main. The human asked to push to GitHub.",
+      "exit_cost": "Medium. A pushed main commit stays in history."
+    },
+    {
+      "decision": "Leave the accuracy arrays empty.",
+      "why": "A non-empty mutation_scope, contract_tests, or arch_rules entry makes guided_run demand Infection, Pact, or Deptrac. This slice copies files and commits them.",
+      "exit_cost": "Low."
+    }
+  ],
+  "nfr": {
+    "growth_horizon": "One maintainer. The guided set stays nine skills.",
+    "cost_ceiling": "No vendored design database and no npx install.",
+    "security": "The commit adds no secrets. The push is a fast-forward to origin/main.",
+    "assumptions": [
+      "The human's it is this repo's verified tree, not a separate frontend app.",
+      "OpenCode and Zed are the only hosts to update.",
+      "A sync failure limited to Kiro and Grok is success for this slice.",
+      "The commit happens on main.",
+      "No ship date beyond this request was set."
+    ]
+  },
+  "test_strategy": {
+    "tests": [
+      "python -m unittest discover -s tests -v",
+      "python scripts/guided_run.py sync --check --repo .",
+      "Host copies of skills/guided-coding/SKILL.md contain: load one design skill for this pass"
+    ],
+    "coverage_min": 80
+  },
+  "invariants": [
+    {
+      "rule": "skills/ contains only the nine guided skill directories.",
+      "enforcement": "tests/test_host_contract_consistency.py"
+    },
+    {
+      "rule": "Kiro and Grok skill trees are not modified by this slice.",
+      "enforcement": "sync --check may report those two hosts and no others."
+    },
+    {
+      "rule": "The OpenCode planner edit allow starts with * deny.",
+      "enforcement": "tests/test_opencode_agent_contracts.py"
+    }
+  ],
+  "done_criteria": [
+    "OpenCode and Zed copies of guided-coding contain load one design skill for this pass",
+    "sync --check reports drift only for Kiro and Grok",
+    "python -m unittest discover -s tests -v passes before the commit",
+    "origin/main contains the new commit and the local main matches it",
+    "docs/guided-memory.md does not exist",
+    "skills/ still has the nine guided skills only"
+  ],
+  "accuracy": {
+    "mutation_scope": [],
+    "contract_tests": [],
+    "arch_rules": []
+  },
+  "source_of_standards": "project convention"
+}

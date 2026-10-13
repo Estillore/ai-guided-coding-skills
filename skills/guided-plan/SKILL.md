@@ -1,6 +1,7 @@
 ---
 name: guided-plan
-description: Write a short or full testable plan and stop. Use for plan, architecture, phased plan, or decide the structure first. Emits Plan IR and runs validate-plan when the host can write and run a shell. Does not implement and does not auto-chain. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Write a short or full testable plan and stop. Use for plan, architecture, phased plan, or decide the structure first. Emits Plan IR and runs validate-plan when the host can write and run a shell. Does not implement and does not auto-chain. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Plan
 
@@ -10,7 +11,7 @@ Force a short, high-quality plan before implementation. This prevents wasted cod
 
 **Core contract**
 - AI outputs the complete minimal plan (goals, constraints, structure, key decisions, test strategy, blast radius).
-- AI updates `docs/guided-memory.md` with new architecture facts.
+- Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`.
 - Stop after the plan. Do not implement and do not invoke another guided phase.
 
 This skill sits between understanding and implementation:
@@ -70,7 +71,7 @@ Follow `docs/family-contract.md`. This skill is done only when all of these hold
 Before planning, check for project memory:
 
 - Read `docs/guided-memory.md` when it exists. Also read `docs/repo-map.json`.
-- Fallbacks for reading only: `.grok/project-memory.md`, `.kiro/project-memory.md`, `docs/project-notes/key_facts.md`. Do not append a project-memory section to `AGENTS.md`. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`.
+- Fallbacks for reading only: `.grok/project-memory.md`, `.kiro/project-memory.md`, `docs/project-notes/key_facts.md`. Do not append a project-memory section to `AGENTS.md`.
 
 **Memory health check (quick)**  
 Note whether useful memory was found. If missing or very thin, create or expand it after the first useful discovery.
@@ -78,7 +79,7 @@ Note whether useful memory was found. If missing or very thin, create or expand 
 **If present** → load it first and treat it as known ground truth. Do not re-discover known architecture.
 
 **Self-regeneration**  
-After a useful planning session that reveals new architecture facts, decisions, or constraints, update `docs/guided-memory.md`. Keep entries short and high-value only. High-value facts (framework, structure style, source of standards) can be written without confirmation.
+After a useful planning session that reveals new architecture facts, decisions, or constraints, follow the memory contract in the overview. Keep entries short and high-value only. High-value facts (framework, structure style, source of standards) can be written without confirmation.
 
 ### Memory file format (keep it tiny)
 
@@ -174,7 +175,7 @@ Record the chosen source of standards in project memory. When Harness is recomme
 1. **AI outputs the complete minimal plan and stops. This rule is absolute.**
    - Present a full short plan, including structure and key decisions.
    - Update the `## Guided` section of `AGENTS.md`. Fall back to `docs/guided-memory.md` only when `AGENTS.md` is absent.
-   - When the host can write `docs/plans/*.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`.
+   - When the host can write `docs/plans/current.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`.
    - Stop after the plan. Do not implement and do not invoke another guided phase. Recommend `guided-coding` or `guided-refactoring`, then stop.
 
 2. **Documentation is Truth** (official docs of every library → project convention → canonical).
@@ -329,8 +330,8 @@ This mode exists to keep the AI in the assistant seat and the human as the owner
    When the human already has a design, prefer Human Design Support mode.
 5. **Apply it + Plan IR gate (mandatory)**
    Save the final plan to memory. Overwrite `docs/plans/current.json` matching `references/plan-schema.json` (shape example: `examples/plan-ir.example.json — structural reference only, never copy its facts`) and run the validator:
-   `python ~/.guided/scripts/guided_run.py validate-plan docs/plans/<slug>.json` (harness entry; raw script lives at `scripts/` in the skills repo).
-   When the host can write `docs/plans/*.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`. `guided-builder` must not start on a FAIL, and never on a missing IR.
+   `python ~/.guided/scripts/guided_run.py validate-plan docs/plans/current.json` (harness entry; raw script lives at `scripts/` in the skills repo).
+   When the host can write `docs/plans/current.json` and run a shell, write the Plan IR and run validate-plan until it prints `PLAN IR: PASS`. `guided-builder` must not start on a FAIL, and never on a missing IR.
    On the Zed Guided Plan profile, deliver the plan in chat and stop. That profile cannot write files or run a terminal, so it does not run validate-plan.
    Carry the architect's `Decision` block into `key_decisions` (with `exit_cost`), `invariants`, `accuracy.arch_rules`, and `nfr`. If you overrule the architect, record the reason in one line — silence is not an override.
    Stop after the plan. Do not implement and do not invoke another guided phase. Recommend `guided-coding` (or `guided-refactoring` for cleanup).

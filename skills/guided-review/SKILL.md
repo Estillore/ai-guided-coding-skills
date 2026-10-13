@@ -1,6 +1,7 @@
 ---
 name: guided-review
-description: Quality and security findings only. Use for review, what should I strengthen, or before merge. Report file:line findings that pass the confidence gate. Running the suite is guided-verify. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Quality and security findings only. Use for review, what should I strengthen, or before merge. Report file:line findings that pass the confidence gate. Running the suite is guided-verify. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Review
 
@@ -54,7 +55,7 @@ Before reviewing, check for project memory:
 - Read `docs/guided-memory.md` when it exists, plus `docs/repo-map.json`.
 - Fallbacks for reading only: `CLAUDE.md`, `docs/project-notes/`.
 
-Respect the project's own conventions. Update `docs/guided-memory.md` only when the review surfaces a new high-value gotcha. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+Respect the project's own conventions. Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`. Do not append a project-memory section to `AGENTS.md`.
 
 ## Semantic retrieval (capability-aware)
 
@@ -83,11 +84,11 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 
 **Pairing with OpenCode agents**
 
-The `guided-review` primary applies fixes. The `guided-reviewer` subagent is read-only and does not edit. Auto-fix CRITICAL and HIGH only when the active host can edit. Record facts in `docs/guided-memory.md`.
+The `guided-review` primary applies fixes. The `guided-reviewer` subagent is read-only and does not edit. Auto-fix CRITICAL and HIGH only when the active host can edit. Follow the memory contract in Project Memory.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-review` or `@guided-review` on the Write profile. Auto-fix CRITICAL and HIGH only when the active host can edit. Record facts in `docs/guided-memory.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-review` or `@guided-review` on the Write profile. Auto-fix CRITICAL and HIGH only when the active host can edit. Follow the memory contract in Project Memory.
 
 ## Core Rules
 

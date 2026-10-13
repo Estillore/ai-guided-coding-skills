@@ -1,6 +1,7 @@
 ---
 name: guided-tdd
-description: Strict test-first only. Use when the user explicitly asks for TDD, red-green-refactor, or an 80%+ coverage gate. Writes the failing test, runs it, then the minimal implementation. General implementation belongs to guided-coding. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Strict test-first only. Use when the user explicitly asks for TDD, red-green-refactor, or an 80%+ coverage gate. Writes the failing test, runs it, then the minimal implementation. General implementation belongs to guided-coding. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided TDD
 
@@ -44,7 +45,7 @@ guided-docs → guided-plan → guided-tdd / guided-coding → guided-refactorin
 
 ## Project Memory
 
-Read `docs/guided-memory.md` when it exists and treat it as ground truth. Update it after meaningful discoveries. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+Read `docs/guided-memory.md` when it exists and treat it as ground truth. Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`. Do not append a project-memory section to `AGENTS.md`.
 
 ## OpenCode support
 
@@ -52,7 +53,7 @@ Install to `~/.config/opencode/skills/` or `.opencode/skills/`. Invoke this skil
 
 ## Zed support
 
-Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-tdd` or `@guided-tdd` on the Write profile. Write the failing test to disk and run it. Record facts in `docs/guided-memory.md`.
+Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-tdd` or `@guided-tdd` on the Write profile. Write the failing test to disk and run it. Follow the memory contract in Project Memory.
 
 ## Automation Process (strict)
 

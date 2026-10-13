@@ -1,6 +1,7 @@
 ---
 name: guided-refactoring
-description: Clean structure without new behavior. Use after the behavior is green, or when asked to refactor vibe-coded code. Does not add features and does not auto-chain. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Clean structure without new behavior. Use after the behavior is green, or when asked to refactor vibe-coded code. Does not add features and does not auto-chain. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Refactoring
 
@@ -76,7 +77,7 @@ Before Adaptability or diagnosis, check for project memory:
 **If present** → load it first and treat it as known ground truth.
 
 **Self-regeneration**  
-After diagnosis or successful refactor steps that reveal new architecture facts, conventions, or gotchas, update `docs/guided-memory.md`. Keep entries short and high-value only. If `AGENTS.md` exists and has no pointer, add one line that names `docs/guided-memory.md`. Do not append a project-memory section to `AGENTS.md`.
+After diagnosis or successful refactor steps that reveal new architecture facts, conventions, or gotchas, follow the memory contract. Keep entries short and high-value only. Replace the `## Guided` section of `AGENTS.md`. Create `docs/guided-memory.md` only when `AGENTS.md` is absent. Overwrite `docs/plans/current.json`. Do not write `docs/plans/<slug>.json`. Do not append a project-memory section to `AGENTS.md`.
 
 ### Memory file format (keep it tiny)
 
@@ -131,11 +132,11 @@ Works natively in OpenCode via the Agent Skills standard. Install to `~/.config/
 | **Plan** | Safe for diagnosis and planning the cleanup sequence (read-only). |
 | **Build** | Use for the actual cleanup steps. AI applies each step directly, runs checks, and auto-fixes. |
 
-Update `docs/guided-memory.md` so the cleaned conventions stick for later sessions.
+Follow the memory contract in Project Memory so the cleaned conventions stick for later sessions.
 
 ## Zed support
 
-Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-refactoring` or `@guided-refactoring`. Automation contract (AI applies the cleaned version directly). Record facts in `docs/guided-memory.md`.
+Works natively with the Zed Agent. Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke with `/guided-refactoring` or `@guided-refactoring`. Automation contract (AI applies the cleaned version directly). Follow the memory contract in Project Memory.
 
 ## Documentation is Truth (highest priority for the target shape)
 

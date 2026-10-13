@@ -1,6 +1,7 @@
 ---
 name: guided-buddy
-description: Learning coach only. Use for teach me, coach me, manual mode, guided pair, Odin mode, or a post-MVP cleanup lesson. Stays read-only until an explicit Pair or Delegate contract. Does not emit the repo-map, does not write the plan, and does not ship the feature. Hands a vibe-coded cleanup to guided-refactoring when the human wants the agent to apply it. Works in Kiro, Grok, OpenCode, and Zed.---
+description: Learning coach only. Use for teach me, coach me, manual mode, guided pair, Odin mode, or a post-MVP cleanup lesson. Stays read-only until an explicit Pair or Delegate contract. Does not emit the repo-map, does not write the plan, and does not ship the feature. Hands a vibe-coded cleanup to guided-refactoring when the human wants the agent to apply it. Works in Kiro, Grok, OpenCode, and Zed.
+---
 
 # Guided Buddy
 

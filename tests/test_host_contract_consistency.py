@@ -34,6 +34,25 @@ MEMORY_WRITE_FORBIDDEN = (
     "Prefer updating `AGENTS.md`",
 )
 
+# One write rule. The slug path may appear only inside this sentence.
+MEMORY_CONTRACT = (
+    "Replace the `## Guided` section of `AGENTS.md`. "
+    "Create `docs/guided-memory.md` only when `AGENTS.md` is absent. "
+    "Overwrite `docs/plans/current.json`. "
+    "Do not write `docs/plans/<slug>.json`."
+)
+
+# Write instructions that open a second memory or plan path.
+MEMORY_PATH_FORBIDDEN = (
+    "docs/plans/*.json",
+    "validate-plan docs/plans/<slug>.json",
+    "update `docs/guided-memory.md`",
+    "Update `docs/guided-memory.md`",
+    "updating `docs/guided-memory.md`",
+    "Record facts in `docs/guided-memory.md`",
+    "names `docs/guided-memory.md`",
+)
+
 
 def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
@@ -44,9 +63,12 @@ class HostContractConsistencyTest(unittest.TestCase):
         for skill in MEMORY_SKILLS:
             text = read("skills/%s/SKILL.md" % skill)
             with self.subTest(skill=skill):
-                self.assertIn("docs/guided-memory.md", text)
-                for phrase in MEMORY_WRITE_FORBIDDEN:
+                self.assertIn(MEMORY_CONTRACT, text)
+                for phrase in MEMORY_WRITE_FORBIDDEN + MEMORY_PATH_FORBIDDEN:
                     self.assertNotIn(phrase, text)
+        readme = read("README.md")
+        self.assertIn(MEMORY_CONTRACT, readme)
+        self.assertNotIn("docs/plans/*.json", readme)
 
     def test_plan_stops_and_zed_plan_profile_does_not_require_the_gate(self):
         text = read("skills/guided-plan/SKILL.md")
@@ -62,11 +84,13 @@ class HostContractConsistencyTest(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "When the host can write `docs/plans/*.json` and run a shell, "
+            "When the host can write `docs/plans/current.json` and run a shell, "
             "write the Plan IR and run validate-plan until it prints "
             "`PLAN IR: PASS`.",
             text,
         )
+        self.assertNotIn("docs/plans/*.json", text)
+        self.assertNotIn("validate-plan docs/plans/<slug>.json", text)
         self.assertNotIn("without waiting", text)
         self.assertNotIn("proceed directly to `guided-coding`", text)
         self.assertNotIn(
@@ -99,6 +123,52 @@ class HostContractConsistencyTest(unittest.TestCase):
         self.assertNotIn("| **Build** |", text)
         self.assertIn("`guided-coding`", text)
         self.assertIn("`guided-test-design`", text)
+
+    def test_design_lane_classifies_the_surface_and_stays_out_of_skills(self):
+        coding = read("skills/guided-coding/SKILL.md")
+        contract = read("docs/family-contract.md")
+        self.assertIn(
+            "Optional design packs install in the app repo, are not family "
+            "members, and the Design lane classifies each surface as "
+            "existing, web app, or website.",
+            contract,
+        )
+        for phrase in (
+            "An existing design pattern on the touched UI wins over both presets.",
+            "minimal and readable",
+            "entrance fades",
+            "A web app does not gain scroll-pinned scenes or a new GSAP dependency.",
+            "A missing skill leaves the preset in place.",
+            "ui-ux-pro-max",
+            "design-taste-frontend",
+            "emil-design-eng",
+            "gsap-core",
+            "impeccable",
+            "website-to-hyperframes",
+            "ui.surface: existing | webapp | website",
+            "load one design skill for this pass",
+            "keep the lines already there",
+        ):
+            self.assertIn(phrase, coding, phrase)
+        self.assertNotIn("then `design-taste-frontend`", coding)
+        names = sorted(
+            p.name for p in (ROOT / "skills").iterdir()
+            if p.is_dir() and not p.name.startswith((".", "_"))
+        )
+        self.assertEqual(
+            names,
+            [
+                "guided-buddy",
+                "guided-coding",
+                "guided-docs",
+                "guided-infra",
+                "guided-plan",
+                "guided-refactoring",
+                "guided-review",
+                "guided-tdd",
+                "guided-verify",
+            ],
+        )
 
     def test_review_skill_autofixes_only_on_a_writer(self):
         review = read("skills/guided-review/SKILL.md")
@@ -159,6 +229,38 @@ class HostContractConsistencyTest(unittest.TestCase):
             'rm -f "$HOME/.config/opencode/agent/guided-tdd.md"', sh
         )
 
+
+    def test_skill_frontmatter_is_zed_loadable(self):
+        """Zed loads a skill only when the closing --- is its own line.
+
+        A fence glued to the description is not a closing delimiter, so Zed
+        reports that the skill failed to load. Descriptions must also stay
+        inside Zed's 1..1024 character gate.
+        """
+        for skill in (
+            "guided-buddy",
+            "guided-docs",
+            "guided-plan",
+            "guided-tdd",
+            "guided-coding",
+            "guided-refactoring",
+            "guided-review",
+            "guided-verify",
+            "guided-infra",
+        ):
+            text = read("skills/%s/SKILL.md" % skill)
+            with self.subTest(skill=skill):
+                lines = text.splitlines()
+                self.assertGreaterEqual(len(lines), 4, skill)
+                self.assertEqual(lines[0], "---")
+                self.assertEqual(lines[1], "name: %s" % skill)
+                self.assertTrue(lines[2].startswith("description: "))
+                description = lines[2][len("description: "):]
+                self.assertFalse(description.endswith("---"), description)
+                self.assertGreaterEqual(len(description), 1)
+                self.assertLessEqual(len(description), 1024)
+                self.assertNotRegex(description, r":\s")
+                self.assertEqual(lines[3], "---")
 
     def test_each_skill_has_exclusive_trigger_and_evals(self):
         exclusive = {
