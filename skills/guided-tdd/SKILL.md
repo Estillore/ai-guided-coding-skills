@@ -1,6 +1,6 @@
 ---
 name: guided-tdd
-description: Strict test-first only. Use when the user explicitly asks for TDD, red-green-refactor, or an 80%+ coverage gate. Writes the failing test, runs it, then the minimal implementation. General implementation belongs to guided-coding. Works in Kiro, Grok, OpenCode, and Zed.
+description: Strict test-first only. Use when the user explicitly asks for TDD, red-green-refactor, or a 100% coverage gate on touched code. Writes the failing test, runs it, then the minimal implementation. General implementation belongs to guided-coding. Works in Kiro, Grok, OpenCode, and Zed.
 ---
 
 # Guided TDD
@@ -61,6 +61,8 @@ Install to `~/.agents/skills/` (global) or `.agents/skills/` (project). Invoke w
 - Restate the expected behavior in one sentence.
 - Ask only if success criteria or edge cases are ambiguous.
 
+Full RED → GREEN → REFACTOR only when the user asks for TDD/coverage or the change is new non-obvious behavior. Otherwise use the narrowest existing executable check (or php -l + php.repro). Prefer no new test over a bad test.
+
 ### 2. Write the RED test (complete & minimal)
 Write the failing test to disk and run it. Include:
 - Exact file path
@@ -83,7 +85,7 @@ GREEN is confirmed by actual tool output. Only proceed when green.
 Apply the cleaned version that keeps the test green. Preserve behavior exactly.
 
 ### 7. Coverage gate
-Run the coverage command and require 80%+ branches/functions/lines/statements on the touched code. Add tests until green.
+Require 100% branches/functions/lines/statements on the touched code when the user asked for coverage or the change is high-risk. Otherwise report the evidence that actually ran. Prefer the narrowest practical tests that reach 100% on the changed lines.
 
 If the repo has no PHPUnit or other runner, do not invent one. The failing check is the recorded repro: `php -l` on the chain, then the `php` script or URL in `php.repro`. That script is the RED test.
 
