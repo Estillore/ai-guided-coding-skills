@@ -16,9 +16,6 @@ Automation mode: the AI implements directly to ship faster while keeping the qua
 
 This is the default operating mode. Manual Mode is `guided-buddy`. If the human asks to learn, type the code, or be coached, do not edit. Recommend `/guided-buddy` and stop.
 
-
-
-
 ## First action on a PHP tree
 
 Before any mode, any whole-file read, or any edit: if the tree has page scripts and `include` / `require`, this is vanilla PHP. React and TDD do not apply.
@@ -50,7 +47,6 @@ Follow `docs/family-contract.md`. This skill is done only when all of these hold
 - Blast radius was declared before any edit.
 - The evidence line is present: `EVIDENCE: <command or artifact> -> <PASS|FAIL|SKIP> (<why>)`.
 - The next skill is named in one line, then stop. Do not auto-chain.
-
 
 ## Complexity Gate (automatic)
 
@@ -192,7 +188,8 @@ Examples: Auth.js, Socket.io, Prisma, Next.js, NestJS, Django, FastAPI, Stripe, 
    For agent harness work, DeepSeek Harness + Cordis official docs and architecture take priority.
 
 2. **Project’s own consistent structure and conventions** (Adaptability + memory)  
-   When the codebase already has a clean, coherent style that does not contradict the docs, match it.
+   When the codebase already has a clean, coherent style that does not contradict the docs, match it.  
+   Run the project formatter if one exists.
 
 3. **Canonical structure** (only when 1 and 2 are absent)  
    - Frontend: FSD-inspired hybrid (`app/` + `features/` + `entities/` + `shared/`)  
@@ -236,11 +233,9 @@ When the developer is working in an unfamiliar project or company codebase and h
 
 Goal: The human can start contributing correctly and consistently — and a coworker reading the code should recognize it as the standard, documented way for that framework (or the clean canonical way when no framework applies).
 
-
 ## Vanilla PHP (page scripts, no framework)
 
 If the repo matches `docs/vanilla-php.md`, follow that file before any generic framework map. Trace URL → entry script → include → function → SQL or redirect. Write that `php.call` into `docs/repo-map.json`. Do not read whole files. A bugfix that starts without `php.call` is not started.
-
 
 ## Semantic retrieval (capability-aware)
 
@@ -297,7 +292,6 @@ Use this when the repo is page scripts, includes, and no React app. Do not apply
 
 ### 1. Strong TDD mode (preferred for new behavior and bug fixes when a test runner exists)
 
-
 Activate when the user says “TDD”, “red-green”, “test first”, “coverage”, or when the task is clearly a new behavior or bug fix that can be expressed as a test.
 
 **Automation contract applies**
@@ -333,7 +327,11 @@ AI writes tests + implementation to disk and runs them. No human typing step.
    One-sentence Ponytail note is enough.
 
 7. **Coverage gate (when relevant)**
-   Run the coverage command and require 80%+ branches / functions / lines / statements on the touched code. Fix or add tests until green.
+   Require 100% branches / functions / lines / statements on the touched code when:
+   - the user asked for coverage, or
+   - the change is high-risk (auth, payments, data invariants, security boundaries).
+
+   Otherwise report the evidence that actually ran. Prefer the narrowest practical tests that reach 100% on the changed lines; do not invent tests that only exist to chase the number.
 
    If the repo has no test runner, do not invent PHPUnit. Evidence is `php -l` on the chain plus `php.repro`.
 
@@ -353,6 +351,11 @@ AI writes tests + implementation to disk and runs them. No human typing step.
     ```
 
    Recommend `guided-refactoring`, then `guided-review`, then `guided-verify`. Stop. Do not auto-chain.
+
+   For high-risk or production-facing changes, include one optional line if relevant:
+   - Security boundary checked (input validation / no secrets / parameterized query)
+   - Observability note (log or error path) when the project already instruments
+   - Rollback or flag note
 
 **Edge cases the AI must always address in the shown tests**
 
