@@ -151,7 +151,13 @@ When the change involves an agent, multi-step tool use, large/monorepo code, or 
    - Stale-green rule: any edit invalidates all prior green outputs. Never report an old PASS as current evidence; re-run after every fix. A non-zero exit is never success.
 
 4. **Close**
-   When the relevant checks are green, report the short Done checklist with evidence:
+   When the relevant checks are green, report the short Done checklist with evidence.
+
+   For high-risk or production-facing changes, the evidence may include one optional line if relevant:
+   - Security boundary checked (input validation / no secrets / parameterized query)
+   - Observability note (log or error path) when the project already instruments
+   - Rollback or flag note
+
 
     ```
     Done?
