@@ -38,6 +38,14 @@ End every run with one line the host can check:
 
 SKIP is allowed only when the host cannot run the command. Say which host limit caused it.
 
+## Quality principles (cite when they shape a decision)
+
+- Sequence verifiable units — verify each small change before the next.
+- Prefer real-artifact or harness evidence when available.
+- Validate at system boundaries; keep internal logic pure.
+
+When both a unit test and a harness or real-artifact check exist, prefer the latter in the evidence line.
+
 ## Memory
 
 Update `AGENTS.md` in place. Replace the `## Guided` section. Do not create `docs/guided-memory.md` when `AGENTS.md` exists.
