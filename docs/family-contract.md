@@ -8,19 +8,20 @@ Load one skill. If two could match, use this order and stop:
 
 1. Teach, coach, pair, manual mode, Odin mode → `guided-buddy`
 2. Map a library or codebase, mental model, repo-map → `guided-docs`
-3. Plan, architecture, decide structure, phases → `guided-plan`
-4. Explicit test-first or coverage goal → `guided-tdd`
-5. Implement, fix a bug, ship a change → `guided-coding`
-6. Clean structure without new behavior → `guided-refactoring`
-7. Review findings, security review → `guided-review`
-8. Run checks, are we done, evidence → `guided-verify`
-9. Infra or growth roadmap → `guided-infra`
+3. Design, layout, visual direction, landing page, dashboard look → `guided-frontend`
+4. Plan, architecture, decide structure, phases → `guided-plan`
+5. Explicit test-first or coverage goal → `guided-tdd`
+6. Implement, fix a bug, ship a change → `guided-coding`
+7. Clean structure without new behavior → `guided-refactoring`
+8. Review findings, security review → `guided-review`
+9. Run checks, are we done, evidence → `guided-verify`
+10. Infra or growth roadmap → `guided-infra`
 
 `agents/guided-planner.json` and `agents/guided-reviewer.json` are agents, not skills.
 
 ## Design packs
 
-Optional design packs install in the app repo, are not family members, and the Design lane classifies each surface as existing, web app, or website.
+Optional external design packs may still be installed in the app repo. `guided-frontend` owns the design decision inside the family. The Design lane in `guided-coding` remains for implementation-time adaptation when no prior design decision exists.
 
 ## Stop
 
